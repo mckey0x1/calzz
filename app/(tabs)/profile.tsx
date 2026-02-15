@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,15 +6,19 @@ import {
   ScrollView,
   Pressable,
   TextInput,
+  Image,
   useColorScheme,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
+import { useAuth } from "@/lib/auth-context";
 import { GlassCard } from "@/components/GlassCard";
 import { CalorieRing } from "@/components/CalorieRing";
 
@@ -29,10 +33,15 @@ export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  const { goals, updateGoals, totalCalories, totalProtein, totalCarbs, totalFat } = useNutrition();
+  const { goals, updateGoals, setFirebaseUid, totalCalories, totalProtein, totalCarbs, totalFat } = useNutrition();
+  const { user, userProfile, isSigningIn, signInWithGoogle, signOut } = useAuth();
 
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+
+  useEffect(() => {
+    setFirebaseUid(user?.uid || null);
+  }, [user?.uid]);
 
   function startEdit(field: string, currentValue: number) {
     setEditingField(field);
@@ -94,7 +103,6 @@ export default function ProfileScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         <Text style={[styles.title, { color: colors.text }]}>Profile & Goals</Text>
 
@@ -109,13 +117,20 @@ export default function ProfileScreen() {
             style={StyleSheet.absoluteFill}
           />
           <View style={styles.profileRow}>
-            <View style={[styles.avatar, { backgroundColor: colors.tint + "20" }]}>
-              <Ionicons name="person" size={28} color={colors.tint} />
-            </View>
+            {user?.photoURL ? (
+              <Image source={{ uri: user.photoURL }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: colors.tint + "20" }]}>
+                <Ionicons name="person" size={28} color={colors.tint} />
+              </View>
+            )}
             <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: colors.text }]}>Your Profile</Text>
+              <Text style={[styles.profileName, { color: colors.text }]}>
+                {user?.displayName || "Your Profile"}
+              </Text>
               <Text style={[styles.profileSub, { color: colors.textSecondary }]}>
-                {goals.dietPreference.charAt(0).toUpperCase() + goals.dietPreference.slice(1)} Diet
+                {user?.email ||
+                  goals.dietPreference.charAt(0).toUpperCase() + goals.dietPreference.slice(1) + " Diet"}
               </Text>
             </View>
             <CalorieRing
@@ -129,6 +144,46 @@ export default function ProfileScreen() {
             </CalorieRing>
           </View>
         </GlassCard>
+
+        {!user ? (
+          <Pressable
+            onPress={signInWithGoogle}
+            disabled={isSigningIn}
+            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+          >
+            <GlassCard style={styles.signInCard}>
+              <LinearGradient
+                colors={["rgba(108,92,231,0.1)", "rgba(0,184,148,0.06)"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              {isSigningIn ? (
+                <ActivityIndicator color={colors.tint} />
+              ) : (
+                <>
+                  <View style={styles.googleIconWrap}>
+                    <Ionicons name="logo-google" size={20} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.signInTitle, { color: colors.text }]}>Sign in with Google</Text>
+                    <Text style={[styles.signInSub, { color: colors.textSecondary }]}>
+                      Sync your data across devices
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </>
+              )}
+            </GlassCard>
+          </Pressable>
+        ) : (
+          <GlassCard style={styles.syncBadge}>
+            <Ionicons name="cloud-done" size={16} color={colors.accentEmerald} />
+            <Text style={[styles.syncText, { color: colors.accentEmerald }]}>
+              Data synced to cloud
+            </Text>
+          </GlassCard>
+        )}
 
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Daily Goals</Text>
         <GlassCard>
@@ -289,6 +344,43 @@ export default function ProfileScreen() {
             </View>
           </GlassCard>
         ))}
+
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Legal</Text>
+        <GlassCard style={{ gap: 0 }}>
+          <Pressable
+            onPress={() => router.push("/privacy-policy")}
+            style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: colors.accentBlue + "15" }]}>
+              <Ionicons name="shield-checkmark-outline" size={18} color={colors.accentBlue} />
+            </View>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <Pressable
+            onPress={() => router.push("/terms")}
+            style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: colors.accentEmerald + "15" }]}>
+              <Ionicons name="document-text-outline" size={18} color={colors.accentEmerald} />
+            </View>
+            <Text style={[styles.menuLabel, { color: colors.text }]}>Terms & Conditions</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
+          </Pressable>
+        </GlassCard>
+
+        {user && (
+          <Pressable
+            onPress={signOut}
+            style={({ pressed }) => [{ opacity: pressed ? 0.7 : 1, marginTop: 8 }]}
+          >
+            <GlassCard style={styles.signOutCard}>
+              <Ionicons name="log-out-outline" size={20} color={colors.dangerRed} />
+              <Text style={[styles.signOutText, { color: colors.dangerRed }]}>Sign Out</Text>
+            </GlassCard>
+          </Pressable>
+        )}
       </ScrollView>
     </View>
   );
@@ -376,11 +468,30 @@ const styles = StyleSheet.create({
   profileHeader: { overflow: "hidden" },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 14 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  avatarImage: { width: 52, height: 52, borderRadius: 26 },
   profileInfo: { flex: 1 },
   profileName: { fontSize: 18, fontFamily: "DMSans_700Bold" },
   profileSub: { fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: 2 },
   profileScore: { fontSize: 11, fontFamily: "DMSans_700Bold" },
   divider: { height: 1, marginVertical: 6 },
+  signInCard: { flexDirection: "row", alignItems: "center", gap: 14, overflow: "hidden" },
+  googleIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signInTitle: { fontSize: 16, fontFamily: "DMSans_700Bold" },
+  signInSub: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 },
+  syncBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+  },
+  syncText: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
   weightRow: { flexDirection: "row", alignItems: "center" },
   weightItem: { flex: 1, alignItems: "center", gap: 4 },
   weightDivider: { width: 1, height: 40 },
@@ -404,4 +515,9 @@ const styles = StyleSheet.create({
   recRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   recDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 1 },
   recText: { flex: 1, fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 20 },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 6 },
+  menuIconBg: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  menuLabel: { flex: 1, fontSize: 15, fontFamily: "DMSans_500Medium" },
+  signOutCard: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12 },
+  signOutText: { fontSize: 15, fontFamily: "DMSans_600SemiBold" },
 });

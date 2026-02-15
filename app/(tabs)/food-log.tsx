@@ -114,7 +114,6 @@ export default function FoodLogScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.title, { color: colors.text }]}>Food Log</Text>

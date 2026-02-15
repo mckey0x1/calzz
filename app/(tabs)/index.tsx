@@ -72,7 +72,6 @@ export default function DashboardScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={styles.header}>
           <View>

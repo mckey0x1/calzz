@@ -73,8 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: clientId,
-    expoClientId: clientId,
+    webClientId: clientId || "placeholder",
+    iosClientId: clientId || "placeholder",
+    expoClientId: clientId || "placeholder",
   });
 
   useEffect(() => {
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle() {
-    if (!firebaseReady) {
+    if (!firebaseReady || !clientId) {
       console.error("Firebase not ready yet");
       return;
     }

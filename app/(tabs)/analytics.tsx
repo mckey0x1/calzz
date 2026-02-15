@@ -76,7 +76,6 @@ export default function AnalyticsScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
       >
         <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
 
