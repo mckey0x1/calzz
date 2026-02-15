@@ -1,12 +1,66 @@
-// template
-const tintColorLight = "#2f95dc";
-
-export default {
+const Colors = {
   light: {
-    text: "#000",
-    background: "#fff",
-    tint: tintColorLight,
-    tabIconDefault: "#ccc",
-    tabIconSelected: tintColorLight,
+    background: "#F5F6FA",
+    surface: "#FFFFFF",
+    surfaceElevated: "rgba(255, 255, 255, 0.85)",
+    text: "#0A0E1A",
+    textSecondary: "#6B7280",
+    textTertiary: "#9CA3AF",
+    tint: "#6C5CE7",
+    accent: "#00B894",
+    accentBlue: "#4A90D9",
+    accentPurple: "#6C5CE7",
+    accentEmerald: "#00B894",
+    accentOrange: "#F39C12",
+    accentPink: "#E84393",
+    border: "rgba(0, 0, 0, 0.06)",
+    cardShadow: "rgba(0, 0, 0, 0.08)",
+    tabIconDefault: "#9CA3AF",
+    tabIconSelected: "#6C5CE7",
+    progressRingBg: "rgba(108, 92, 231, 0.1)",
+    glassBg: "rgba(255, 255, 255, 0.7)",
+    glassBorder: "rgba(255, 255, 255, 0.5)",
+    proteinColor: "#6C5CE7",
+    carbsColor: "#4A90D9",
+    fatColor: "#F39C12",
+    waterColor: "#00B5D8",
+    successGreen: "#00B894",
+    warningOrange: "#F39C12",
+    dangerRed: "#E17055",
+  },
+  dark: {
+    background: "#0A0E1A",
+    surface: "#141929",
+    surfaceElevated: "rgba(30, 36, 58, 0.85)",
+    text: "#F0F1F5",
+    textSecondary: "#8B92A5",
+    textTertiary: "#5A6178",
+    tint: "#8B7CF7",
+    accent: "#00D9A5",
+    accentBlue: "#5BA3F5",
+    accentPurple: "#8B7CF7",
+    accentEmerald: "#00D9A5",
+    accentOrange: "#FFB347",
+    accentPink: "#FF6B9D",
+    border: "rgba(255, 255, 255, 0.08)",
+    cardShadow: "rgba(0, 0, 0, 0.4)",
+    tabIconDefault: "#5A6178",
+    tabIconSelected: "#8B7CF7",
+    progressRingBg: "rgba(139, 124, 247, 0.15)",
+    glassBg: "rgba(20, 25, 41, 0.75)",
+    glassBorder: "rgba(255, 255, 255, 0.1)",
+    proteinColor: "#8B7CF7",
+    carbsColor: "#5BA3F5",
+    fatColor: "#FFB347",
+    waterColor: "#00D9F5",
+    successGreen: "#00D9A5",
+    warningOrange: "#FFB347",
+    dangerRed: "#FF7675",
   },
 };
+
+export default Colors;
+
+export function useThemeColors(colorScheme: "light" | "dark" | null | undefined) {
+  return Colors[colorScheme === "dark" ? "dark" : "light"];
+}
