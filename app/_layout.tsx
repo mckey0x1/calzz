@@ -7,6 +7,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { NutritionProvider } from "@/lib/nutrition-context";
+import { AuthProvider } from "@/lib/auth-context";
 import {
   useFonts,
   DMSans_400Regular,
@@ -22,6 +23,8 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerBackTitle: "Back" }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="scan-result" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="privacy-policy" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="terms" options={{ headerShown: false, presentation: "modal" }} />
     </Stack>
   );
 }
@@ -47,9 +50,11 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <GestureHandlerRootView>
           <KeyboardProvider>
-            <NutritionProvider>
-              <RootLayoutNav />
-            </NutritionProvider>
+            <AuthProvider>
+              <NutritionProvider>
+                <RootLayoutNav />
+              </NutritionProvider>
+            </AuthProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
       </QueryClientProvider>

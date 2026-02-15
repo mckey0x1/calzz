@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { saveUserGoals, saveDailyLog, loadUserGoals, loadDailyLog, loadWeekLogs, syncAllDataToFirebase } from "./firebase-data";
 
 export interface FoodEntry {
   id: string;
@@ -44,6 +45,7 @@ interface NutritionContextValue {
   removeWater: () => void;
   updateGoals: (goals: Partial<UserGoals>) => void;
   updateWeight: (weight: number) => void;
+  setFirebaseUid: (uid: string | null) => void;
   totalCalories: number;
   totalProtein: number;
   totalCarbs: number;
@@ -90,6 +92,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const [weekLogs, setWeekLogs] = useState<DailyLog[]>([]);
   const [goals, setGoals] = useState<UserGoals>(DEFAULT_GOALS);
   const [isLoading, setIsLoading] = useState(true);
+  const firebaseUidRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -153,9 +156,21 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function syncToFirebase(log: DailyLog, currentGoals?: UserGoals) {
+    const uid = firebaseUidRef.current;
+    if (!uid) return;
+    try {
+      await saveDailyLog(uid, log);
+      if (currentGoals) await saveUserGoals(uid, currentGoals);
+    } catch (e) {
+      console.error("Firebase sync error:", e);
+    }
+  }
+
   async function saveTodayLog(log: DailyLog) {
     setTodayLog(log);
     await AsyncStorage.setItem(`nutriai_log_${getDateKey()}`, JSON.stringify(log));
+    syncToFirebase(log);
   }
 
   function addFoodEntry(entry: Omit<FoodEntry, "id" | "timestamp">) {
@@ -185,12 +200,23 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     const updated = { ...goals, ...newGoals };
     setGoals(updated);
     await AsyncStorage.setItem("nutriai_goals", JSON.stringify(updated));
+    const uid = firebaseUidRef.current;
+    if (uid) {
+      try { await saveUserGoals(uid, updated); } catch {}
+    }
   }
 
   async function updateWeight(weight: number) {
     const updated = { ...todayLog, weight };
     saveTodayLog(updated);
     updateGoals({ currentWeight: weight });
+  }
+
+  function setFirebaseUid(uid: string | null) {
+    firebaseUidRef.current = uid;
+    if (uid) {
+      syncAllDataToFirebase(uid, { goals, todayLog, weekLogs }).catch(() => {});
+    }
   }
 
   const totalCalories = useMemo(() => todayLog.entries.reduce((sum, e) => sum + e.calories, 0), [todayLog.entries]);
@@ -209,6 +235,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       removeWater,
       updateGoals,
       updateWeight,
+      setFirebaseUid,
       totalCalories,
       totalProtein,
       totalCarbs,
