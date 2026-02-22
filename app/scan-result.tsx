@@ -42,10 +42,13 @@ export default function ScanResultScreen() {
   const [protein, setProtein] = useState(String(MOCK_SCAN.protein));
   const [carbs, setCarbs] = useState(String(MOCK_SCAN.carbs));
   const [fat, setFat] = useState(String(MOCK_SCAN.fat));
-  const [selectedMeal, setSelectedMeal] = useState<"breakfast" | "lunch" | "dinner" | "snack">("lunch");
+  const [selectedMeal, setSelectedMeal] = useState<
+    "breakfast" | "lunch" | "dinner" | "snack"
+  >("lunch");
 
   function handleSave() {
-    if (Platform.OS !== "web") Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== "web")
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addFoodEntry({
       name: foodName,
       calories: parseInt(calories, 10) || 0,
@@ -63,8 +66,16 @@ export default function ScanResultScreen() {
   }
 
   const meals = [
-    { key: "breakfast" as const, icon: "sunny-outline" as const, label: "Breakfast" },
-    { key: "lunch" as const, icon: "partly-sunny-outline" as const, label: "Lunch" },
+    {
+      key: "breakfast" as const,
+      icon: "sunny-outline" as const,
+      label: "Breakfast",
+    },
+    {
+      key: "lunch" as const,
+      icon: "partly-sunny-outline" as const,
+      label: "Lunch",
+    },
     { key: "dinner" as const, icon: "moon-outline" as const, label: "Dinner" },
     { key: "snack" as const, icon: "cafe-outline" as const, label: "Snack" },
   ];
@@ -72,42 +83,67 @@ export default function ScanResultScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#dfffa2ff", "#f3f4d4ff"]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 16,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
             paddingBottom: insets.bottom + 100,
           },
         ]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Pressable onPress={handleClose} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+          <Pressable
+            onPress={handleClose}
+            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
             <Ionicons name="close" size={28} color={colors.text} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Scan Result</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            Scan Result
+          </Text>
           <View style={{ width: 28 }} />
         </View>
 
         <GlassCard style={styles.imagePreview}>
           <LinearGradient
             colors={[
-              colorScheme === "dark" ? "rgba(139,124,247,0.2)" : "rgba(108,92,231,0.1)",
-              colorScheme === "dark" ? "rgba(0,217,165,0.15)" : "rgba(0,184,148,0.08)",
+              colorScheme === "dark"
+                ? "rgba(139,124,247,0.2)"
+                : "rgba(108,92,231,0.1)",
+              colorScheme === "dark"
+                ? "rgba(0,217,165,0.15)"
+                : "rgba(0,184,148,0.08)",
             ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
           <Ionicons name="image" size={48} color={colors.tint} />
-          <Text style={[styles.previewText, { color: colors.textSecondary }]}>AI Food Recognition</Text>
+          <Text style={[styles.previewText, { color: colors.textSecondary }]}>
+            AI Food Recognition
+          </Text>
           <View style={styles.confidenceRow}>
-            <View style={[styles.confidenceBadge, { backgroundColor: colors.accentEmerald + "20" }]}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.accentEmerald} />
-              <Text style={[styles.confidenceText, { color: colors.accentEmerald }]}>
+            <View
+              style={[
+                styles.confidenceBadge,
+                { backgroundColor: colors.accentEmerald + "20" },
+              ]}>
+              <Ionicons
+                name="checkmark-circle"
+                size={14}
+                color={colors.accentEmerald}
+              />
+              <Text
+                style={[
+                  styles.confidenceText,
+                  { color: colors.accentEmerald },
+                ]}>
                 {MOCK_SCAN.confidence}% confidence
               </Text>
             </View>
@@ -115,9 +151,14 @@ export default function ScanResultScreen() {
         </GlassCard>
 
         <GlassCard>
-          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Food Name</Text>
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
+            Food Name
+          </Text>
           <TextInput
-            style={[styles.nameInput, { color: colors.text, borderColor: colors.border }]}
+            style={[
+              styles.nameInput,
+              { color: colors.text, borderColor: colors.border },
+            ]}
             value={foodName}
             onChangeText={setFoodName}
             placeholder="Enter food name"
@@ -125,7 +166,9 @@ export default function ScanResultScreen() {
           />
         </GlassCard>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Meal Category</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Meal Category
+        </Text>
         <View style={styles.mealRow}>
           {meals.map((m) => (
             <Pressable
@@ -134,25 +177,34 @@ export default function ScanResultScreen() {
                 setSelectedMeal(m.key);
                 if (Platform.OS !== "web") Haptics.selectionAsync();
               }}
-              style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.8 : 1 }]}
-            >
+              style={({ pressed }) => [
+                { flex: 1, opacity: pressed ? 0.8 : 1 },
+              ]}>
               <GlassCard
                 style={[
                   styles.mealCard,
-                  selectedMeal === m.key && { borderColor: colors.tint, borderWidth: 2 },
-                ]}
-              >
+                  selectedMeal === m.key && {
+                    borderColor: colors.tint,
+                    borderWidth: 2,
+                  },
+                ]}>
                 <Ionicons
                   name={m.icon}
                   size={20}
-                  color={selectedMeal === m.key ? colors.tint : colors.textSecondary}
+                  color={
+                    selectedMeal === m.key ? colors.tint : colors.textSecondary
+                  }
                 />
                 <Text
                   style={[
                     styles.mealLabel,
-                    { color: selectedMeal === m.key ? colors.tint : colors.textSecondary },
-                  ]}
-                >
+                    {
+                      color:
+                        selectedMeal === m.key
+                          ? colors.tint
+                          : colors.textSecondary,
+                    },
+                  ]}>
                   {m.label}
                 </Text>
               </GlassCard>
@@ -160,7 +212,9 @@ export default function ScanResultScreen() {
           ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Nutrition</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          Nutrition
+        </Text>
         <GlassCard>
           <View style={styles.calorieCenter}>
             <CalorieRing
@@ -168,42 +222,79 @@ export default function ScanResultScreen() {
               size={100}
               strokeWidth={8}
               color={colors.tint}
-              trackColor={colors.progressRingBg}
-            >
+              trackColor={colors.progressRingBg}>
               <TextInput
                 style={[styles.calInput, { color: colors.text }]}
                 value={calories}
                 onChangeText={setCalories}
                 keyboardType="numeric"
               />
-              <Text style={[styles.calLabel, { color: colors.textTertiary }]}>cal</Text>
+              <Text style={[styles.calLabel, { color: colors.textTertiary }]}>
+                cal
+              </Text>
             </CalorieRing>
           </View>
 
           <View style={styles.macroGrid}>
-            <NutrientInput label="Protein" value={protein} onChange={setProtein} unit="g" color={colors.proteinColor} colors={colors} />
-            <NutrientInput label="Carbs" value={carbs} onChange={setCarbs} unit="g" color={colors.carbsColor} colors={colors} />
-            <NutrientInput label="Fat" value={fat} onChange={setFat} unit="g" color={colors.fatColor} colors={colors} />
+            <NutrientInput
+              label="Protein"
+              value={protein}
+              onChange={setProtein}
+              unit="g"
+              color={colors.proteinColor}
+              colors={colors}
+            />
+            <NutrientInput
+              label="Carbs"
+              value={carbs}
+              onChange={setCarbs}
+              unit="g"
+              color={colors.carbsColor}
+              colors={colors}
+            />
+            <NutrientInput
+              label="Fat"
+              value={fat}
+              onChange={setFat}
+              unit="g"
+              color={colors.fatColor}
+              colors={colors}
+            />
           </View>
 
-          <View style={[styles.detailDivider, { backgroundColor: colors.border }]} />
+          <View
+            style={[styles.detailDivider, { backgroundColor: colors.border }]}
+          />
           <View style={styles.detailRow}>
-            <DetailItem label="Fiber" value={`${MOCK_SCAN.fiber}g`} colors={colors} />
-            <DetailItem label="Sugar" value={`${MOCK_SCAN.sugar}g`} colors={colors} />
-            <DetailItem label="Sodium" value={`${MOCK_SCAN.sodium}mg`} colors={colors} />
+            <DetailItem
+              label="Fiber"
+              value={`${MOCK_SCAN.fiber}g`}
+              colors={colors}
+            />
+            <DetailItem
+              label="Sugar"
+              value={`${MOCK_SCAN.sugar}g`}
+              colors={colors}
+            />
+            <DetailItem
+              label="Sodium"
+              value={`${MOCK_SCAN.sodium}mg`}
+              colors={colors}
+            />
           </View>
         </GlassCard>
 
         <Pressable
           onPress={handleSave}
-          style={({ pressed }) => [styles.saveButton, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}
-        >
+          style={({ pressed }) => [
+            styles.saveButton,
+            { transform: [{ scale: pressed ? 0.97 : 1 }] },
+          ]}>
           <LinearGradient
             colors={[colors.tint, colors.accentEmerald]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
-            style={styles.saveGradient}
-          >
+            style={styles.saveGradient}>
             <Ionicons name="checkmark" size={22} color="#fff" />
             <Text style={styles.saveText}>Add to Food Log</Text>
           </LinearGradient>
@@ -231,15 +322,22 @@ function NutrientInput({
   return (
     <View style={nutrientStyles.container}>
       <View style={[nutrientStyles.dot, { backgroundColor: color }]} />
-      <Text style={[nutrientStyles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[nutrientStyles.label, { color: colors.textSecondary }]}>
+        {label}
+      </Text>
       <View style={nutrientStyles.inputRow}>
         <TextInput
-          style={[nutrientStyles.input, { color: colors.text, borderColor: color + "40" }]}
+          style={[
+            nutrientStyles.input,
+            { color: colors.text, borderColor: color + "40" },
+          ]}
           value={value}
           onChangeText={onChange}
           keyboardType="numeric"
         />
-        <Text style={[nutrientStyles.unit, { color: colors.textTertiary }]}>{unit}</Text>
+        <Text style={[nutrientStyles.unit, { color: colors.textTertiary }]}>
+          {unit}
+        </Text>
       </View>
     </View>
   );
@@ -256,8 +354,12 @@ function DetailItem({
 }) {
   return (
     <View style={detailStyles.item}>
-      <Text style={[detailStyles.label, { color: colors.textTertiary }]}>{label}</Text>
-      <Text style={[detailStyles.value, { color: colors.textSecondary }]}>{value}</Text>
+      <Text style={[detailStyles.label, { color: colors.textTertiary }]}>
+        {label}
+      </Text>
+      <Text style={[detailStyles.value, { color: colors.textSecondary }]}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -322,7 +424,12 @@ const styles = StyleSheet.create({
   mealCard: { alignItems: "center", gap: 4, paddingVertical: 12 },
   mealLabel: { fontSize: 11, fontFamily: "DMSans_500Medium" },
   calorieCenter: { alignItems: "center", marginBottom: 20 },
-  calInput: { fontSize: 24, fontFamily: "DMSans_700Bold", textAlign: "center", minWidth: 50 },
+  calInput: {
+    fontSize: 24,
+    fontFamily: "DMSans_700Bold",
+    textAlign: "center",
+    minWidth: 50,
+  },
   calLabel: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: -2 },
   macroGrid: { flexDirection: "row", gap: 12 },
   detailDivider: { height: 1, marginVertical: 14 },

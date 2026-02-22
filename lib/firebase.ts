@@ -14,6 +14,8 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let database: Database | null = null;
 let googleWebClientId: string = "";
+let androidClientId: string = "";
+let iosClientId: string = "";
 let initPromise: Promise<void> | null = null;
 
 async function fetchFirebaseConfig() {
@@ -40,6 +42,8 @@ async function fetchFirebaseConfig() {
 async function doInit() {
   const config = await fetchFirebaseConfig();
   googleWebClientId = config.googleWebClientId || "";
+  androidClientId = config.androidClientId || "";
+  iosClientId = config.iosClientId || "";
 
   const firebaseConfig = {
     apiKey: config.apiKey,
@@ -87,6 +91,14 @@ export function getFirebaseDatabase(): Database {
 
 export function getGoogleWebClientId(): string {
   return googleWebClientId;
+}
+
+export function getGoogleAndroidClientId(): string {
+  return androidClientId;
+}
+
+export function getGoogleIosClientId(): string {
+  return iosClientId;
 }
 
 export { app, auth, database };

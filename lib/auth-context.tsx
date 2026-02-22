@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  ReactNode,
+} from "react";
 import { Platform, Alert } from "react-native";
 import {
   onAuthStateChanged,
@@ -15,6 +22,8 @@ import {
   getFirebaseAuth,
   getFirebaseDatabase,
   getGoogleWebClientId,
+  getGoogleAndroidClientId,
+  getGoogleIosClientId,
 } from "./firebase";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -46,24 +55,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [firebaseReady, setFirebaseReady] = useState(false);
-  const [clientId, setClientId] = useState<string | undefined>(undefined);
+  const [clientId, setClientId] = useState<string | undefined>("placeholder");
+  const [androidClientId, setAndroidClientId] = useState<string | undefined>(
+    "placeholder",
+  );
+  const [iosClientId, setIosClientId] = useState<string | undefined>(
+    "placeholder",
+  );
 
   useEffect(() => {
     initFirebase()
       .then(() => {
         setFirebaseReady(true);
-        setClientId(getGoogleWebClientId() || undefined);
+        setClientId(getGoogleWebClientId() || "placeholder");
+        setAndroidClientId(getGoogleAndroidClientId() || "placeholder");
+        setIosClientId(getGoogleIosClientId() || "placeholder");
 
         const authInstance = getFirebaseAuth();
-        const unsubscribe = onAuthStateChanged(authInstance, async (firebaseUser) => {
-          setUser(firebaseUser);
-          if (firebaseUser) {
-            await loadOrCreateProfile(firebaseUser);
-          } else {
-            setUserProfile(null);
-          }
-          setIsLoading(false);
-        });
+        const unsubscribe = onAuthStateChanged(
+          authInstance,
+          async (firebaseUser) => {
+            setUser(firebaseUser);
+            if (firebaseUser) {
+              await loadOrCreateProfile(firebaseUser);
+            } else {
+              setUserProfile(null);
+            }
+            setIsLoading(false);
+          },
+        );
         return unsubscribe;
       })
       .catch((err) => {
@@ -73,14 +93,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: clientId || "placeholder",
-    iosClientId: clientId || "placeholder",
-    expoClientId: clientId || "placeholder",
+    webClientId: clientId,
+    androidClientId: androidClientId,
+    iosClientId: iosClientId,
   });
 
   useEffect(() => {
     if (response?.type === "success" && response.authentication?.idToken) {
-      const credential = GoogleAuthProvider.credential(response.authentication.idToken);
+      const credential = GoogleAuthProvider.credential(
+        response.authentication.idToken,
+      );
       const authInstance = getFirebaseAuth();
       signInWithCredential(authInstance, credential).catch((error) => {
         console.error("Firebase sign in error:", error);
@@ -153,8 +175,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ user, userProfile, isLoading, isSigningIn, firebaseReady, signInWithGoogle, signOut }),
-    [user, userProfile, isLoading, isSigningIn, firebaseReady]
+    () => ({
+      user,
+      userProfile,
+      isLoading,
+      isSigningIn,
+      firebaseReady,
+      signInWithGoogle,
+      signOut,
+    }),
+    [user, userProfile, isLoading, isSigningIn, firebaseReady],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

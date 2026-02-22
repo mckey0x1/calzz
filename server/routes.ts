@@ -12,6 +12,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
       appId: process.env.FIREBASE_APP_ID,
       googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+      androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
+      iosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
     });
   });
 

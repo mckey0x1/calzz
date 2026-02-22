@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
@@ -84,30 +85,46 @@ export default function TermsScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
+      {/* <LinearGradient
+        colors={["#dfffa2ff", "#f3f4d4ff"]}
+        style={StyleSheet.absoluteFill}
+      /> */}
       <View
         style={[
           styles.header,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 12,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
             borderBottomColor: colors.border,
           },
-        ]}
-      >
-        <Pressable onPress={() => router.back()} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+        ]}>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
           <Ionicons name="close" size={28} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Terms & Conditions</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Terms & Conditions
+        </Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.badge, { backgroundColor: colors.accentEmerald + "15" }]}>
-          <Ionicons name="document-text" size={16} color={colors.accentEmerald} />
-          <Text style={[styles.badgeText, { color: colors.accentEmerald }]}>Terms of Use</Text>
+        showsVerticalScrollIndicator={false}>
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: colors.accentEmerald + "15" },
+          ]}>
+          <Ionicons
+            name="document-text"
+            size={16}
+            color={colors.accentEmerald}
+          />
+          <Text style={[styles.badgeText, { color: colors.accentEmerald }]}>
+            Terms of Use
+          </Text>
         </View>
 
         <Text style={[styles.lastUpdated, { color: colors.textTertiary }]}>
@@ -115,7 +132,9 @@ export default function TermsScreen() {
         </Text>
 
         <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          Please read these Terms and Conditions carefully before using NutriAI. These terms govern your use of the application and establish a legally binding agreement between you and NutriAI.
+          Please read these Terms and Conditions carefully before using NutriAI.
+          These terms govern your use of the application and establish a legally
+          binding agreement between you and NutriAI.
         </Text>
 
         {SECTIONS.map((section, i) => (
@@ -123,7 +142,8 @@ export default function TermsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {i + 1}. {section.title}
             </Text>
-            <Text style={[styles.sectionContent, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionContent, { color: colors.textSecondary }]}>
               {section.content}
             </Text>
           </View>
@@ -161,5 +181,9 @@ const styles = StyleSheet.create({
   intro: { fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 22 },
   section: { gap: 6 },
   sectionTitle: { fontSize: 16, fontFamily: "DMSans_700Bold" },
-  sectionContent: { fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 22 },
+  sectionContent: {
+    fontSize: 14,
+    fontFamily: "DMSans_400Regular",
+    lineHeight: 22,
+  },
 });

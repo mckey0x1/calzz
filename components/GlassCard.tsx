@@ -1,10 +1,16 @@
 import React from "react";
-import { View, StyleSheet, ViewStyle, useColorScheme } from "react-native";
+import {
+  View,
+  StyleSheet,
+  StyleProp,
+  ViewStyle,
+  useColorScheme,
+} from "react-native";
 import { useThemeColors } from "@/constants/colors";
 
 interface GlassCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   noPadding?: boolean;
 }
 
@@ -23,8 +29,7 @@ export function GlassCard({ children, style, noPadding }: GlassCardProps) {
         },
         noPadding ? undefined : styles.padding,
         style,
-      ]}
-    >
+      ]}>
       {children}
     </View>
   );
@@ -36,7 +41,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 12,
+    shadowRadius: 20,
     elevation: 4,
     overflow: "hidden",
   },

@@ -66,12 +66,13 @@ export default function FoodLogScreen() {
   const searchResults = useMemo(() => {
     if (!search.trim()) return [];
     return QUICK_ADD_FOODS.filter((f) =>
-      f.name.toLowerCase().includes(search.toLowerCase())
+      f.name.toLowerCase().includes(search.toLowerCase()),
     );
   }, [search]);
 
   function handleQuickAdd(food: (typeof QUICK_ADD_FOODS)[0]) {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     addFoodEntry({
       name: food.name,
       calories: food.calories,
@@ -84,17 +85,24 @@ export default function FoodLogScreen() {
   }
 
   function handleRemoveEntry(entry: FoodEntry) {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     removeFoodEntry(entry.id);
   }
 
   function handleScanPress() {
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     router.push("/scan-result");
   }
 
   const mealTotals = useMemo(() => {
-    const totals: Record<string, number> = { breakfast: 0, lunch: 0, dinner: 0, snack: 0 };
+    const totals: Record<string, number> = {
+      breakfast: 0,
+      lunch: 0,
+      dinner: 0,
+      snack: 0,
+    };
     todayLog.entries.forEach((e) => {
       totals[e.meal] = (totals[e.meal] || 0) + e.calories;
     });
@@ -104,21 +112,31 @@ export default function FoodLogScreen() {
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={["#dfffa2ff", "#f3f4d4ff"]}
+        style={StyleSheet.absoluteFill}
+      />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 16,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
             paddingBottom: Platform.OS === "web" ? 34 + 84 : 100,
           },
         ]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.text }]}>Food Log</Text>
 
-        <View style={[styles.searchContainer, { backgroundColor: colors.surfaceElevated, borderColor: colors.glassBorder }]}>
+        <View
+          style={[
+            styles.searchContainer,
+            {
+              backgroundColor: colors.surfaceElevated,
+              borderColor: colors.glassBorder,
+            },
+          ]}>
           <Feather name="search" size={18} color={colors.textTertiary} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
@@ -141,20 +159,38 @@ export default function FoodLogScreen() {
                 key={food.name}
                 style={({ pressed }) => [
                   styles.searchResultItem,
-                  i < searchResults.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                  i < searchResults.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: colors.border,
+                  },
                   { opacity: pressed ? 0.7 : 1 },
                 ]}
-                onPress={() => handleQuickAdd(food)}
-              >
+                onPress={() => handleQuickAdd(food)}>
                 <View style={styles.searchResultInfo}>
-                  <Text style={[styles.searchResultName, { color: colors.text }]}>{food.name}</Text>
-                  <Text style={[styles.searchResultMacros, { color: colors.textTertiary }]}>
-                    P: {food.protein}g  C: {food.carbs}g  F: {food.fat}g
+                  <Text
+                    style={[styles.searchResultName, { color: colors.text }]}>
+                    {food.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.searchResultMacros,
+                      { color: colors.textTertiary },
+                    ]}>
+                    P: {food.protein}g C: {food.carbs}g F: {food.fat}g
                   </Text>
                 </View>
                 <View style={styles.searchResultRight}>
-                  <Text style={[styles.searchResultCal, { color: colors.tint }]}>{food.calories}</Text>
-                  <Text style={[styles.searchResultCalLabel, { color: colors.textTertiary }]}>cal</Text>
+                  <Text
+                    style={[styles.searchResultCal, { color: colors.tint }]}>
+                    {food.calories}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.searchResultCalLabel,
+                      { color: colors.textTertiary },
+                    ]}>
+                    cal
+                  </Text>
                 </View>
               </Pressable>
             ))}
@@ -165,8 +201,7 @@ export default function FoodLogScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.tabsScroll}
-          contentContainerStyle={styles.tabsContent}
-        >
+          contentContainerStyle={styles.tabsContent}>
           {MEAL_TABS.map((tab, i) => (
             <Pressable
               key={tab}
@@ -178,15 +213,17 @@ export default function FoodLogScreen() {
                 styles.tab,
                 selectedTab === i
                   ? { backgroundColor: colors.tint }
-                  : { backgroundColor: colors.surfaceElevated, borderColor: colors.glassBorder, borderWidth: 1 },
-              ]}
-            >
+                  : {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: colors.glassBorder,
+                      borderWidth: 1,
+                    },
+              ]}>
               <Text
                 style={[
                   styles.tabText,
                   { color: selectedTab === i ? "#fff" : colors.textSecondary },
-                ]}
-              >
+                ]}>
                 {tab}
                 {i > 0 && mealTotals[tab.toLowerCase()] > 0
                   ? ` (${mealTotals[tab.toLowerCase()]})`
@@ -198,19 +235,32 @@ export default function FoodLogScreen() {
 
         {!search && (
           <View style={styles.quickAddSection}>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Quick Add</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickAddRow}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Quick Add
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickAddRow}>
               {QUICK_ADD_FOODS.slice(0, 6).map((food) => (
                 <Pressable
                   key={food.name}
                   onPress={() => handleQuickAdd(food)}
                   style={({ pressed }) => [
                     styles.quickChip,
-                    { backgroundColor: colors.surfaceElevated, borderColor: colors.glassBorder, opacity: pressed ? 0.7 : 1 },
-                  ]}
-                >
-                  <Text style={[styles.quickChipText, { color: colors.text }]}>{food.name}</Text>
-                  <Text style={[styles.quickChipCal, { color: colors.tint }]}>{food.calories}</Text>
+                    {
+                      backgroundColor: colors.surfaceElevated,
+                      borderColor: colors.glassBorder,
+                      opacity: pressed ? 0.7 : 1,
+                    },
+                  ]}>
+                  <Text style={[styles.quickChipText, { color: colors.text }]}>
+                    {food.name}
+                  </Text>
+                  <Text style={[styles.quickChipCal, { color: colors.tint }]}>
+                    {food.calories}
+                  </Text>
                 </Pressable>
               ))}
             </ScrollView>
@@ -224,8 +274,13 @@ export default function FoodLogScreen() {
           {filteredEntries.length === 0 ? (
             <GlassCard>
               <View style={styles.emptyState}>
-                <Ionicons name="restaurant-outline" size={32} color={colors.textTertiary} />
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                <Ionicons
+                  name="restaurant-outline"
+                  size={32}
+                  color={colors.textTertiary}
+                />
+                <Text
+                  style={[styles.emptyText, { color: colors.textSecondary }]}>
                   No entries yet. Search or scan to add food.
                 </Text>
               </View>
@@ -248,14 +303,12 @@ export default function FoodLogScreen() {
           styles.fab,
           { transform: [{ scale: pressed ? 0.92 : 1 }] },
         ]}
-        onPress={handleScanPress}
-      >
+        onPress={handleScanPress}>
         <LinearGradient
           colors={[colors.tint, colors.accentEmerald]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.fabGradient}
-        >
+          style={styles.fabGradient}>
           <Ionicons name="camera" size={26} color="#fff" />
         </LinearGradient>
       </Pressable>
@@ -273,7 +326,10 @@ function FoodEntryCard({
   onRemove: () => void;
 }) {
   const time = new Date(entry.timestamp);
-  const timeStr = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const timeStr = time.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
   const mealIcons: Record<string, string> = {
     breakfast: "sunny-outline",
     lunch: "partly-sunny-outline",
@@ -284,27 +340,47 @@ function FoodEntryCard({
   return (
     <GlassCard style={styles.entryCard}>
       <View style={styles.entryRow}>
-        <View style={[styles.entryIcon, { backgroundColor: colors.tint + "15" }]}>
-          <Ionicons name={mealIcons[entry.meal] as any} size={18} color={colors.tint} />
+        <View
+          style={[styles.entryIcon, { backgroundColor: colors.tint + "15" }]}>
+          <Ionicons
+            name={mealIcons[entry.meal] as any}
+            size={18}
+            color={colors.tint}
+          />
         </View>
         <View style={styles.entryInfo}>
-          <Text style={[styles.entryName, { color: colors.text }]}>{entry.name}</Text>
+          <Text style={[styles.entryName, { color: colors.text }]}>
+            {entry.name}
+          </Text>
           <Text style={[styles.entryTime, { color: colors.textTertiary }]}>
-            {entry.meal.charAt(0).toUpperCase() + entry.meal.slice(1)} · {timeStr}
+            {entry.meal.charAt(0).toUpperCase() + entry.meal.slice(1)} ·{" "}
+            {timeStr}
           </Text>
         </View>
         <View style={styles.entryRight}>
-          <Text style={[styles.entryCal, { color: colors.text }]}>{entry.calories}</Text>
-          <Text style={[styles.entryCalLabel, { color: colors.textTertiary }]}>cal</Text>
+          <Text style={[styles.entryCal, { color: colors.text }]}>
+            {entry.calories}
+          </Text>
+          <Text style={[styles.entryCalLabel, { color: colors.textTertiary }]}>
+            cal
+          </Text>
         </View>
-        <Pressable onPress={onRemove} style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
+        <Pressable
+          onPress={onRemove}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
           <Feather name="x" size={16} color={colors.textTertiary} />
         </Pressable>
       </View>
       <View style={styles.entryMacros}>
-        <Text style={[styles.macroText, { color: colors.proteinColor }]}>P: {entry.protein}g</Text>
-        <Text style={[styles.macroText, { color: colors.carbsColor }]}>C: {entry.carbs}g</Text>
-        <Text style={[styles.macroText, { color: colors.fatColor }]}>F: {entry.fat}g</Text>
+        <Text style={[styles.macroText, { color: colors.proteinColor }]}>
+          P: {entry.protein}g
+        </Text>
+        <Text style={[styles.macroText, { color: colors.carbsColor }]}>
+          C: {entry.carbs}g
+        </Text>
+        <Text style={[styles.macroText, { color: colors.fatColor }]}>
+          F: {entry.fat}g
+        </Text>
       </View>
     </GlassCard>
   );
@@ -312,7 +388,7 @@ function FoodEntryCard({
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, gap: 12 },
+  scrollContent: { paddingHorizontal: 20, gap: 24 },
   title: { fontSize: 28, fontFamily: "DMSans_700Bold" },
   searchContainer: {
     flexDirection: "row",
@@ -338,7 +414,11 @@ const styles = StyleSheet.create({
   },
   searchResultInfo: { flex: 1 },
   searchResultName: { fontSize: 15, fontFamily: "DMSans_500Medium" },
-  searchResultMacros: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 },
+  searchResultMacros: {
+    fontSize: 12,
+    fontFamily: "DMSans_400Regular",
+    marginTop: 2,
+  },
   searchResultRight: { alignItems: "flex-end" },
   searchResultCal: { fontSize: 16, fontFamily: "DMSans_700Bold" },
   searchResultCalLabel: { fontSize: 11, fontFamily: "DMSans_400Regular" },
@@ -347,7 +427,12 @@ const styles = StyleSheet.create({
   tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   tabText: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
   quickAddSection: { gap: 8 },
-  sectionLabel: { fontSize: 13, fontFamily: "DMSans_500Medium", textTransform: "uppercase", letterSpacing: 0.5 },
+  sectionLabel: {
+    fontSize: 13,
+    fontFamily: "DMSans_500Medium",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   quickAddRow: { gap: 8 },
   quickChip: {
     flexDirection: "row",
@@ -362,10 +447,20 @@ const styles = StyleSheet.create({
   quickChipCal: { fontSize: 12, fontFamily: "DMSans_600SemiBold" },
   entriesSection: { gap: 8 },
   emptyState: { alignItems: "center", gap: 8, paddingVertical: 24 },
-  emptyText: { fontSize: 14, fontFamily: "DMSans_400Regular", textAlign: "center" },
+  emptyText: {
+    fontSize: 14,
+    fontFamily: "DMSans_400Regular",
+    textAlign: "center",
+  },
   entryCard: { marginBottom: 0 },
   entryRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  entryIcon: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  entryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   entryInfo: { flex: 1 },
   entryName: { fontSize: 15, fontFamily: "DMSans_600SemiBold" },
   entryTime: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 },
