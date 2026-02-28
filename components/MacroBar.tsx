@@ -66,15 +66,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontFamily: "DMSans_500Medium",
+    fontFamily: "Poppins_500Medium",
   },
   value: {
     fontSize: 14,
-    fontFamily: "DMSans_600SemiBold",
+    fontFamily: "Poppins_600SemiBold",
   },
   unit: {
     fontSize: 12,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Poppins_400Regular",
   },
   track: {
     height: 6,

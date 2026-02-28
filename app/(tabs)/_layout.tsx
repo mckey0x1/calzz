@@ -253,7 +253,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
           shadowRadius: 8,
           elevation: 5,
         }}>
-        <Link href="/scan-result" asChild>
+        <Link href="/scanner" asChild>
           <Pressable
             style={({ pressed }) => ({
               width: 64,

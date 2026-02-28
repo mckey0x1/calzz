@@ -132,9 +132,9 @@ export default function TermsScreen() {
         </Text>
 
         <Text style={[styles.intro, { color: colors.textSecondary }]}>
-          Please read these Terms and Conditions carefully before using NutriAI.
+          Please read these Terms and Conditions carefully before using Calzz.
           These terms govern your use of the application and establish a legally
-          binding agreement between you and NutriAI.
+          binding agreement between you and Calzz.
         </Text>
 
         {SECTIONS.map((section, i) => (
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
   },
-  headerTitle: { fontSize: 18, fontFamily: "DMSans_700Bold" },
+  headerTitle: { fontSize: 18, fontFamily: "Poppins_700Bold" },
   scrollContent: { paddingHorizontal: 20, paddingTop: 20, gap: 16 },
   badge: {
     flexDirection: "row",
@@ -176,14 +176,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
   },
-  badgeText: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
-  lastUpdated: { fontSize: 12, fontFamily: "DMSans_400Regular" },
-  intro: { fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 22 },
+  badgeText: { fontSize: 13, fontFamily: "Poppins_600SemiBold" },
+  lastUpdated: { fontSize: 12, fontFamily: "Poppins_400Regular" },
+  intro: { fontSize: 14, fontFamily: "Poppins_400Regular", lineHeight: 22 },
   section: { gap: 6 },
-  sectionTitle: { fontSize: 16, fontFamily: "DMSans_700Bold" },
+  sectionTitle: { fontSize: 16, fontFamily: "Poppins_700Bold" },
   sectionContent: {
     fontSize: 14,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Poppins_400Regular",
     lineHeight: 22,
   },
 });

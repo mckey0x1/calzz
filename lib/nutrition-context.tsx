@@ -1,6 +1,22 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  ReactNode,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { saveUserGoals, saveDailyLog, loadUserGoals, loadDailyLog, loadWeekLogs, syncAllDataToFirebase } from "./firebase-data";
+import {
+  saveUserGoals,
+  saveDailyLog,
+  loadUserGoals,
+  loadDailyLog,
+  loadWeekLogs,
+  syncAllDataToFirebase,
+} from "./firebase-data";
+import { analyzeFoodImageBase64 } from "./gemini";
 
 export interface FoodEntry {
   id: string;
@@ -51,6 +67,12 @@ interface NutritionContextValue {
   totalCarbs: number;
   totalFat: number;
   isLoading: boolean;
+  isAnalyzing: boolean;
+  analyzingImage: string | null;
+  setAnalyzing: (val: boolean, img?: string) => void;
+  scanResult: any | null;
+  analyzingPercent: number;
+  analyzeFood: (base64Image: string, uri: string) => Promise<void>;
 }
 
 const NutritionContext = createContext<NutritionContextValue | null>(null);
@@ -76,22 +98,69 @@ function generateId(): string {
 }
 
 function createEmptyLog(date: string): DailyLog {
-  return { date, entries: [], waterGlasses: 0, steps: Math.floor(Math.random() * 4000 + 3000), weight: undefined };
+  return {
+    date,
+    entries: [],
+    waterGlasses: 0,
+    steps: Math.floor(Math.random() * 4000 + 3000),
+    weight: undefined,
+  };
 }
 
 const SAMPLE_ENTRIES: Omit<FoodEntry, "id" | "timestamp">[] = [
-  { name: "Greek Yogurt Bowl", calories: 280, protein: 22, carbs: 30, fat: 8, meal: "breakfast" },
-  { name: "Avocado Toast", calories: 350, protein: 12, carbs: 35, fat: 18, meal: "breakfast" },
-  { name: "Grilled Chicken Salad", calories: 420, protein: 38, carbs: 15, fat: 22, meal: "lunch" },
-  { name: "Quinoa Bowl", calories: 380, protein: 14, carbs: 52, fat: 12, meal: "lunch" },
-  { name: "Salmon & Rice", calories: 520, protein: 35, carbs: 45, fat: 18, meal: "dinner" },
+  {
+    name: "Greek Yogurt Bowl",
+    calories: 280,
+    protein: 22,
+    carbs: 30,
+    fat: 8,
+    meal: "breakfast",
+  },
+  {
+    name: "Avocado Toast",
+    calories: 350,
+    protein: 12,
+    carbs: 35,
+    fat: 18,
+    meal: "breakfast",
+  },
+  {
+    name: "Grilled Chicken Salad",
+    calories: 420,
+    protein: 38,
+    carbs: 15,
+    fat: 22,
+    meal: "lunch",
+  },
+  {
+    name: "Quinoa Bowl",
+    calories: 380,
+    protein: 14,
+    carbs: 52,
+    fat: 12,
+    meal: "lunch",
+  },
+  {
+    name: "Salmon & Rice",
+    calories: 520,
+    protein: 35,
+    carbs: 45,
+    fat: 18,
+    meal: "dinner",
+  },
 ];
 
 export function NutritionProvider({ children }: { children: ReactNode }) {
-  const [todayLog, setTodayLog] = useState<DailyLog>(createEmptyLog(getDateKey()));
+  const [todayLog, setTodayLog] = useState<DailyLog>(
+    createEmptyLog(getDateKey()),
+  );
   const [weekLogs, setWeekLogs] = useState<DailyLog[]>([]);
   const [goals, setGoals] = useState<UserGoals>(DEFAULT_GOALS);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analyzingImage, setAnalyzingImage] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<any | null>(null);
+  const [analyzingPercent, setAnalyzingPercent] = useState(0);
   const firebaseUidRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -134,7 +203,8 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
           const log = createEmptyLog(getDateKey(d));
           const entryCount = Math.floor(Math.random() * 3) + 2;
           for (let j = 0; j < entryCount; j++) {
-            const sample = SAMPLE_ENTRIES[Math.floor(Math.random() * SAMPLE_ENTRIES.length)];
+            const sample =
+              SAMPLE_ENTRIES[Math.floor(Math.random() * SAMPLE_ENTRIES.length)];
             log.entries.push({
               ...sample,
               id: generateId(),
@@ -169,18 +239,28 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
 
   async function saveTodayLog(log: DailyLog) {
     setTodayLog(log);
-    await AsyncStorage.setItem(`nutriai_log_${getDateKey()}`, JSON.stringify(log));
+    await AsyncStorage.setItem(
+      `nutriai_log_${getDateKey()}`,
+      JSON.stringify(log),
+    );
     syncToFirebase(log);
   }
 
   function addFoodEntry(entry: Omit<FoodEntry, "id" | "timestamp">) {
-    const newEntry: FoodEntry = { ...entry, id: generateId(), timestamp: Date.now() };
+    const newEntry: FoodEntry = {
+      ...entry,
+      id: generateId(),
+      timestamp: Date.now(),
+    };
     const updated = { ...todayLog, entries: [...todayLog.entries, newEntry] };
     saveTodayLog(updated);
   }
 
   function removeFoodEntry(id: string) {
-    const updated = { ...todayLog, entries: todayLog.entries.filter((e) => e.id !== id) };
+    const updated = {
+      ...todayLog,
+      entries: todayLog.entries.filter((e) => e.id !== id),
+    };
     saveTodayLog(updated);
   }
 
@@ -202,7 +282,9 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem("nutriai_goals", JSON.stringify(updated));
     const uid = firebaseUidRef.current;
     if (uid) {
-      try { await saveUserGoals(uid, updated); } catch {}
+      try {
+        await saveUserGoals(uid, updated);
+      } catch {}
     }
   }
 
@@ -219,10 +301,64 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const totalCalories = useMemo(() => todayLog.entries.reduce((sum, e) => sum + e.calories, 0), [todayLog.entries]);
-  const totalProtein = useMemo(() => todayLog.entries.reduce((sum, e) => sum + e.protein, 0), [todayLog.entries]);
-  const totalCarbs = useMemo(() => todayLog.entries.reduce((sum, e) => sum + e.carbs, 0), [todayLog.entries]);
-  const totalFat = useMemo(() => todayLog.entries.reduce((sum, e) => sum + e.fat, 0), [todayLog.entries]);
+  function setAnalyzing(val: boolean, img?: string) {
+    setIsAnalyzing(val);
+    if (img) setAnalyzingImage(img);
+    else if (!val) setAnalyzingImage(null);
+  }
+
+  async function analyzeFood(base64Image: string, uri: string) {
+    setIsAnalyzing(true);
+    setAnalyzingImage(uri);
+    setAnalyzingPercent(0);
+
+    // Simulated progress simulation interval
+    const interval = setInterval(() => {
+      setAnalyzingPercent((prev) => {
+        if (prev >= 90) return prev;
+        return prev + Math.floor(Math.random() * 10) + 5;
+      });
+    }, 500);
+
+    try {
+      const result = await analyzeFoodImageBase64(base64Image);
+      setScanResult({
+        ...result,
+        image: uri,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
+      setAnalyzingPercent(100);
+    } catch (e) {
+      console.error(e);
+      setAnalyzingPercent(0);
+    } finally {
+      clearInterval(interval);
+      // Let it dwell a bit at 100%
+      setTimeout(() => {
+        setIsAnalyzing(false);
+      }, 500);
+    }
+  }
+
+  const totalCalories = useMemo(
+    () => todayLog.entries.reduce((sum, e) => sum + e.calories, 0),
+    [todayLog.entries],
+  );
+  const totalProtein = useMemo(
+    () => todayLog.entries.reduce((sum, e) => sum + e.protein, 0),
+    [todayLog.entries],
+  );
+  const totalCarbs = useMemo(
+    () => todayLog.entries.reduce((sum, e) => sum + e.carbs, 0),
+    [todayLog.entries],
+  );
+  const totalFat = useMemo(
+    () => todayLog.entries.reduce((sum, e) => sum + e.fat, 0),
+    [todayLog.entries],
+  );
 
   const value = useMemo(
     () => ({
@@ -241,15 +377,39 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       totalCarbs,
       totalFat,
       isLoading,
+      isAnalyzing,
+      analyzingImage,
+      setAnalyzing,
+      scanResult,
+      analyzingPercent,
+      analyzeFood,
     }),
-    [todayLog, weekLogs, goals, totalCalories, totalProtein, totalCarbs, totalFat, isLoading]
+    [
+      todayLog,
+      weekLogs,
+      goals,
+      totalCalories,
+      totalProtein,
+      totalCarbs,
+      totalFat,
+      isLoading,
+      isAnalyzing,
+      analyzingImage,
+      scanResult,
+      analyzingPercent,
+    ],
   );
 
-  return <NutritionContext.Provider value={value}>{children}</NutritionContext.Provider>;
+  return (
+    <NutritionContext.Provider value={value}>
+      {children}
+    </NutritionContext.Provider>
+  );
 }
 
 export function useNutrition() {
   const context = useContext(NutritionContext);
-  if (!context) throw new Error("useNutrition must be used within NutritionProvider");
+  if (!context)
+    throw new Error("useNutrition must be used within NutritionProvider");
   return context;
 }

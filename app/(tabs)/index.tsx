@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -13,6 +13,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  withSequence,
+  Easing,
+} from "react-native-reanimated";
 import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useNutrition } from "@/lib/nutrition-context";
@@ -33,6 +42,11 @@ export default function DashboardScreen() {
     todayLog,
     addWater,
     removeWater,
+    isAnalyzing,
+    analyzingImage,
+    setAnalyzing,
+    analyzingPercent,
+    scanResult,
   } = useNutrition();
   const { user } = useAuth();
   const firstName = user?.displayName ? user.displayName.split(" ")[0] : "Alex";
@@ -50,6 +64,12 @@ export default function DashboardScreen() {
         : progress < 0.3
           ? "Great start to the day! Keep logging your meals to stay on track."
           : "Looking good! You're maintaining a balanced intake today.";
+
+  useEffect(() => {
+    if (!isAnalyzing && scanResult) {
+      router.push("/scan-result");
+    }
+  }, [isAnalyzing, scanResult]);
 
   function handleAddWater() {
     if (Platform.OS !== "web")
@@ -114,7 +134,7 @@ export default function DashboardScreen() {
                   {
                     color: colors.text,
                     fontSize: 18,
-                    fontFamily: "DMSans_700Bold",
+                    fontFamily: "Poppins_700Bold",
                   },
                 ]}>
                 Hello {firstName} 👋
@@ -123,7 +143,7 @@ export default function DashboardScreen() {
                 style={{
                   color: colors.textSecondary,
                   fontSize: 13,
-                  fontFamily: "DMSans_400Regular",
+                  fontFamily: "Poppins_400Regular",
                   marginTop: 2,
                 }}>
                 Get ready
@@ -242,6 +262,94 @@ export default function DashboardScreen() {
             />
           </View>
         </GlassCard>
+
+        {isAnalyzing && (
+          <>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: colors.text, marginTop: 8 },
+              ]}>
+              Recently eaten
+            </Text>
+            <GlassCard style={styles.analyzingCard}>
+              <View style={styles.analyzingContent}>
+                <View style={styles.analyzingImageContainer}>
+                  {analyzingImage ? (
+                    <Image
+                      source={{ uri: analyzingImage }}
+                      style={styles.analyzingImage}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.analyzingImagePlaceholder,
+                        { backgroundColor: colors.border },
+                      ]}
+                    />
+                  )}
+                  <View style={styles.analyzingOverlay}>
+                    <CalorieRing
+                      progress={analyzingPercent / 100}
+                      size={48}
+                      strokeWidth={4}
+                      color="#fff"
+                      trackColor="rgba(255,255,255,0.3)">
+                      <Text
+                        style={[styles.analyzingPercent, { color: "#fff" }]}>
+                        {analyzingPercent}%
+                      </Text>
+                    </CalorieRing>
+                  </View>
+                </View>
+
+                <View style={styles.analyzingTextContainer}>
+                  <Text style={[styles.analyzingTitle, { color: colors.text }]}>
+                    Analyzing food...
+                  </Text>
+
+                  {/* Skeletons */}
+                  <View style={styles.skeletonBars}>
+                    <View
+                      style={[
+                        styles.skeletonLine,
+                        { backgroundColor: colors.border },
+                      ]}
+                    />
+                    <View style={styles.skeletonRow}>
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: colors.border },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: colors.border },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: colors.border },
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.analyzingSubtext,
+                      { color: colors.textTertiary },
+                    ]}>
+                    We'll notify you when done!
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
+          </>
+        )}
 
         <GlassCard style={styles.aiCard}>
           <LinearGradient
@@ -381,7 +489,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  greeting: { fontSize: 14, fontFamily: "DMSans_400Regular" },
+  greeting: { fontSize: 14, fontFamily: "Poppins_400Regular" },
   bellButton: {
     width: 44,
     height: 44,
@@ -407,18 +515,18 @@ const styles = StyleSheet.create({
   },
   calorieCard: { marginTop: 4 },
   calorieContent: { alignItems: "center", gap: 20 },
-  calorieNumber: { fontSize: 36, fontFamily: "DMSans_700Bold" },
+  calorieNumber: { fontSize: 36, fontFamily: "Poppins_700Bold" },
   calorieLabel: {
     fontSize: 13,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Poppins_400Regular",
     marginTop: -2,
   },
   calorieSummary: { flexDirection: "row", gap: 24 },
   summaryItem: { alignItems: "center", gap: 4 },
   summaryDot: { width: 6, height: 6, borderRadius: 3 },
-  summaryLabel: { fontSize: 12, fontFamily: "DMSans_400Regular" },
-  summaryValue: { fontSize: 16, fontFamily: "DMSans_600SemiBold" },
-  sectionTitle: { fontSize: 18, fontFamily: "DMSans_700Bold", marginTop: 8 },
+  summaryLabel: { fontSize: 12, fontFamily: "Poppins_400Regular" },
+  summaryValue: { fontSize: 16, fontFamily: "Poppins_600SemiBold" },
+  sectionTitle: { fontSize: 18, fontFamily: "Poppins_700Bold", marginTop: 8 },
   macroContainer: { gap: 14 },
   aiCard: { overflow: "hidden" },
   aiHeader: {
@@ -434,8 +542,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  aiTitle: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
-  aiText: { fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 20 },
+  aiTitle: { fontSize: 13, fontFamily: "Poppins_600SemiBold" },
+  aiText: { fontSize: 14, fontFamily: "Poppins_400Regular", lineHeight: 20 },
   activityRow: { flexDirection: "row", gap: 12 },
   activityCard: { flex: 1 },
   activityHeader: {
@@ -444,13 +552,13 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 8,
   },
-  activityTitle: { fontSize: 13, fontFamily: "DMSans_500Medium" },
+  activityTitle: { fontSize: 13, fontFamily: "Poppins_500Medium" },
   activityValue: {
     fontSize: 24,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Poppins_700Bold",
     marginBottom: 8,
   },
-  activityUnit: { fontSize: 14, fontFamily: "DMSans_400Regular" },
+  activityUnit: { fontSize: 14, fontFamily: "Poppins_400Regular" },
   waterTrack: {
     height: 6,
     borderRadius: 3,
@@ -467,5 +575,68 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   waterBtnAdd: {},
-  stepsGoal: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 },
+  stepsGoal: { fontSize: 12, fontFamily: "Poppins_400Regular", marginTop: 2 },
+  analyzingCard: {
+    padding: 16,
+  },
+  analyzingContent: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  analyzingImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  analyzingImage: {
+    width: "100%",
+    height: "100%",
+  },
+  analyzingImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+  },
+  analyzingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analyzingPercent: {
+    fontSize: 12,
+    fontFamily: "Poppins_700Bold",
+  },
+  analyzingTextContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  analyzingTitle: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    marginBottom: 8,
+  },
+  skeletonBars: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  skeletonLine: {
+    height: 4,
+    borderRadius: 2,
+    width: "80%",
+  },
+  skeletonRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  skeletonLineShort: {
+    height: 4,
+    borderRadius: 2,
+    width: "25%",
+  },
+  analyzingSubtext: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+  },
 });

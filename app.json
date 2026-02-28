@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "NutriAI",
-    "slug": "my-app",
+    "name": "Calzz",
+    "slug": "calzz",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "calzz",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

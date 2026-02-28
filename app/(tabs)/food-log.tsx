@@ -1,490 +1,576 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   Pressable,
-  TextInput,
   useColorScheme,
   Platform,
-  Alert,
+  Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons, Feather } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
-import { useNutrition, FoodEntry } from "@/lib/nutrition-context";
-import { GlassCard } from "@/components/GlassCard";
+import { useNutrition } from "@/lib/nutrition-context";
+import { CalorieRing } from "@/components/CalorieRing";
 
-const MEAL_TABS = ["All", "Breakfast", "Lunch", "Dinner", "Snack"] as const;
-
-const QUICK_ADD_FOODS = [
-  { name: "Banana", calories: 105, protein: 1, carbs: 27, fat: 0 },
-  { name: "Egg (boiled)", calories: 78, protein: 6, carbs: 1, fat: 5 },
-  { name: "Chicken Breast", calories: 165, protein: 31, carbs: 0, fat: 4 },
-  { name: "Brown Rice (cup)", calories: 216, protein: 5, carbs: 45, fat: 2 },
-  { name: "Apple", calories: 95, protein: 0, carbs: 25, fat: 0 },
-  { name: "Almonds (28g)", calories: 164, protein: 6, carbs: 6, fat: 14 },
-  { name: "Oatmeal", calories: 150, protein: 5, carbs: 27, fat: 3 },
-  { name: "Salmon (100g)", calories: 208, protein: 20, carbs: 0, fat: 13 },
-  { name: "Sweet Potato", calories: 103, protein: 2, carbs: 24, fat: 0 },
-  { name: "Greek Yogurt", calories: 100, protein: 17, carbs: 6, fat: 1 },
-  { name: "Protein Shake", calories: 120, protein: 24, carbs: 3, fat: 2 },
-  { name: "Avocado (half)", calories: 120, protein: 1, carbs: 6, fat: 11 },
-];
-
-type MealType = "breakfast" | "lunch" | "dinner" | "snack";
-
-function getMealFromTime(): MealType {
-  const h = new Date().getHours();
-  if (h < 11) return "breakfast";
-  if (h < 15) return "lunch";
-  if (h < 20) return "dinner";
-  return "snack";
-}
+type Tab = "today" | "yesterday";
 
 export default function FoodLogScreen() {
   const colorScheme = useColorScheme();
-  const colors = useThemeColors(colorScheme);
+  const colors = useThemeColors("light"); // the screenshot is very light, force light colors for consistent look
   const insets = useSafeAreaInsets();
-  const { todayLog, addFoodEntry, removeFoodEntry } = useNutrition();
-  const [selectedTab, setSelectedTab] = useState(0);
-  const [search, setSearch] = useState("");
 
-  const filteredEntries = useMemo(() => {
-    let entries = todayLog.entries;
-    if (selectedTab > 0) {
-      const meal = MEAL_TABS[selectedTab].toLowerCase() as MealType;
-      entries = entries.filter((e) => e.meal === meal);
+  const {
+    todayLog,
+    weekLogs,
+    goals,
+    isAnalyzing,
+    analyzingImage,
+    analyzingPercent,
+    scanResult,
+  } = useNutrition();
+
+  const [activeTab, setActiveTab] = useState<Tab>("today");
+
+  const yesterdayLog = weekLogs.length > 0 ? weekLogs[5] : null;
+
+  const currentLog = activeTab === "today" ? todayLog : yesterdayLog;
+
+  const totalCalories =
+    currentLog?.entries.reduce((sum, e) => sum + e.calories, 0) || 0;
+  const totalProtein =
+    currentLog?.entries.reduce((sum, e) => sum + e.protein, 0) || 0;
+  const totalCarbs =
+    currentLog?.entries.reduce((sum, e) => sum + e.carbs, 0) || 0;
+  const totalFat = currentLog?.entries.reduce((sum, e) => sum + e.fat, 0) || 0;
+
+  const caloriesLeft = Math.max(0, goals.dailyCalories - totalCalories);
+  const proteinLeft = Math.max(0, goals.proteinGoal - totalProtein);
+  const carbsLeft = Math.max(0, goals.carbsGoal - totalCarbs);
+  const fatLeft = Math.max(0, goals.fatGoal - totalFat);
+
+  const calProgress = totalCalories / goals.dailyCalories;
+
+  useEffect(() => {
+    if (!isAnalyzing && scanResult) {
+      router.push("/scan-result");
     }
-    return entries.sort((a, b) => b.timestamp - a.timestamp);
-  }, [todayLog.entries, selectedTab]);
-
-  const searchResults = useMemo(() => {
-    if (!search.trim()) return [];
-    return QUICK_ADD_FOODS.filter((f) =>
-      f.name.toLowerCase().includes(search.toLowerCase()),
-    );
-  }, [search]);
-
-  function handleQuickAdd(food: (typeof QUICK_ADD_FOODS)[0]) {
-    if (Platform.OS !== "web")
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    addFoodEntry({
-      name: food.name,
-      calories: food.calories,
-      protein: food.protein,
-      carbs: food.carbs,
-      fat: food.fat,
-      meal: getMealFromTime(),
-    });
-    setSearch("");
-  }
-
-  function handleRemoveEntry(entry: FoodEntry) {
-    if (Platform.OS !== "web")
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    removeFoodEntry(entry.id);
-  }
-
-  function handleScanPress() {
-    if (Platform.OS !== "web")
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    router.push("/scan-result");
-  }
-
-  const mealTotals = useMemo(() => {
-    const totals: Record<string, number> = {
-      breakfast: 0,
-      lunch: 0,
-      dinner: 0,
-      snack: 0,
-    };
-    todayLog.entries.forEach((e) => {
-      totals[e.meal] = (totals[e.meal] || 0) + e.calories;
-    });
-    return totals;
-  }, [todayLog.entries]);
+  }, [isAnalyzing, scanResult]);
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#dfffa2ff", "#f3f4d4ff"]}
-        style={StyleSheet.absoluteFill}
-      />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
-            paddingBottom: Platform.OS === "web" ? 34 + 84 : 100,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 24,
+            paddingBottom: Platform.OS === "web" ? 34 + 84 : 140, // extra padding for bottom bar
           },
         ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-        <Text style={[styles.title, { color: colors.text }]}>Food Log</Text>
-
-        <View
-          style={[
-            styles.searchContainer,
-            {
-              backgroundColor: colors.surfaceElevated,
-              borderColor: colors.glassBorder,
-            },
-          ]}>
-          <Feather name="search" size={18} color={colors.textTertiary} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Search foods..."
-            placeholderTextColor={colors.textTertiary}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch("")}>
-              <Feather name="x" size={18} color={colors.textTertiary} />
-            </Pressable>
-          )}
+        showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>🍏 Cal AI</Text>
         </View>
 
-        {searchResults.length > 0 && (
-          <GlassCard noPadding style={styles.searchResults}>
-            {searchResults.map((food, i) => (
-              <Pressable
-                key={food.name}
-                style={({ pressed }) => [
-                  styles.searchResultItem,
-                  i < searchResults.length - 1 && {
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
-                  },
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}
-                onPress={() => handleQuickAdd(food)}>
-                <View style={styles.searchResultInfo}>
-                  <Text
-                    style={[styles.searchResultName, { color: colors.text }]}>
-                    {food.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.searchResultMacros,
-                      { color: colors.textTertiary },
-                    ]}>
-                    P: {food.protein}g C: {food.carbs}g F: {food.fat}g
-                  </Text>
-                </View>
-                <View style={styles.searchResultRight}>
-                  <Text
-                    style={[styles.searchResultCal, { color: colors.tint }]}>
-                    {food.calories}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.searchResultCalLabel,
-                      { color: colors.textTertiary },
-                    ]}>
-                    cal
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </GlassCard>
-        )}
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.tabsScroll}
-          contentContainerStyle={styles.tabsContent}>
-          {MEAL_TABS.map((tab, i) => (
-            <Pressable
-              key={tab}
-              onPress={() => {
-                setSelectedTab(i);
-                if (Platform.OS !== "web") Haptics.selectionAsync();
-              }}
-              style={[
-                styles.tab,
-                selectedTab === i
-                  ? { backgroundColor: colors.tint }
-                  : {
-                      backgroundColor: colors.surfaceElevated,
-                      borderColor: colors.glassBorder,
-                      borderWidth: 1,
-                    },
-              ]}>
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: selectedTab === i ? "#fff" : colors.textSecondary },
-                ]}>
-                {tab}
-                {i > 0 && mealTotals[tab.toLowerCase()] > 0
-                  ? ` (${mealTotals[tab.toLowerCase()]})`
-                  : ""}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-
-        {!search && (
-          <View style={styles.quickAddSection}>
+        {/* Date Tabs */}
+        <View style={styles.dateTabs}>
+          <Pressable
+            onPress={() => setActiveTab("today")}
+            style={styles.dateTab}>
             <Text
-              style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              Quick Add
+              style={[
+                styles.dateTabText,
+                activeTab === "today" && styles.dateTabActiveText,
+              ]}>
+              Today
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickAddRow}>
-              {QUICK_ADD_FOODS.slice(0, 6).map((food) => (
-                <Pressable
-                  key={food.name}
-                  onPress={() => handleQuickAdd(food)}
-                  style={({ pressed }) => [
-                    styles.quickChip,
-                    {
-                      backgroundColor: colors.surfaceElevated,
-                      borderColor: colors.glassBorder,
-                      opacity: pressed ? 0.7 : 1,
-                    },
-                  ]}>
-                  <Text style={[styles.quickChipText, { color: colors.text }]}>
-                    {food.name}
-                  </Text>
-                  <Text style={[styles.quickChipCal, { color: colors.tint }]}>
-                    {food.calories}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            {activeTab === "today" && <View style={styles.dateTabDot} />}
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab("yesterday")}
+            style={styles.dateTab}>
+            <Text
+              style={[
+                styles.dateTabText,
+                activeTab === "yesterday" && styles.dateTabActiveText,
+              ]}>
+              Yesterday
+            </Text>
+            {activeTab === "yesterday" && <View style={styles.dateTabDot} />}
+          </Pressable>
+        </View>
+
+        {/* Calories Card */}
+        <View style={styles.caloriesCard}>
+          <View style={styles.caloriesTextContainer}>
+            <Text style={styles.caloriesNumber}>{caloriesLeft}</Text>
+            <Text style={styles.caloriesLabel}>Calories left</Text>
+          </View>
+          <View style={styles.caloriesRingContainer}>
+            <CalorieRing
+              progress={calProgress}
+              size={90}
+              strokeWidth={8}
+              color="#000"
+              trackColor="#F3F4F6">
+              <Ionicons name="flame" size={24} color="#000" />
+            </CalorieRing>
+          </View>
+        </View>
+
+        {/* Macros */}
+        <View style={styles.macrosRow}>
+          <View style={styles.macroCard}>
+            <Text style={styles.macroVal}>{proteinLeft}g</Text>
+            <Text style={styles.macroLbl}>Protein left</Text>
+            <View
+              style={[
+                styles.macroIconBg,
+                { borderColor: "#FEE2E2", backgroundColor: "#fff" },
+              ]}>
+              <View
+                style={[
+                  styles.macroIconBgInner,
+                  { backgroundColor: "#FEE2E2" },
+                ]}>
+                <Ionicons name="nutrition" size={14} color="#EF4444" />
+              </View>
+            </View>
+          </View>
+          <View style={styles.macroCard}>
+            <Text style={styles.macroVal}>{carbsLeft}g</Text>
+            <Text style={styles.macroLbl}>Carbs left</Text>
+            <View
+              style={[
+                styles.macroIconBg,
+                { borderColor: "#FFEDD5", backgroundColor: "#fff" },
+              ]}>
+              <View
+                style={[
+                  styles.macroIconBgInner,
+                  { backgroundColor: "#FFEDD5" },
+                ]}>
+                <Ionicons name="pizza" size={14} color="#F97316" />
+              </View>
+            </View>
+          </View>
+          <View style={styles.macroCard}>
+            <Text style={styles.macroVal}>{fatLeft}g</Text>
+            <Text style={styles.macroLbl}>Fat left</Text>
+            <View
+              style={[
+                styles.macroIconBg,
+                { borderColor: "#E0F2FE", backgroundColor: "#fff" },
+              ]}>
+              <View
+                style={[
+                  styles.macroIconBgInner,
+                  { backgroundColor: "#E0F2FE" },
+                ]}>
+                <Ionicons name="water" size={14} color="#0EA5E9" />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Recently Eaten */}
+        <Text style={styles.sectionTitle}>Recently eaten</Text>
+
+        {isAnalyzing && activeTab === "today" && (
+          <View style={styles.analyzingCard}>
+            <View style={styles.analyzingContent}>
+              <View style={styles.analyzingImageContainer}>
+                {analyzingImage ? (
+                  <Image
+                    source={{ uri: analyzingImage }}
+                    style={styles.analyzingImage}
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.analyzingImagePlaceholder,
+                      { backgroundColor: "#F3F4F6" },
+                    ]}
+                  />
+                )}
+                <View style={styles.analyzingOverlay}>
+                  <CalorieRing
+                    progress={analyzingPercent / 100}
+                    size={48}
+                    strokeWidth={4}
+                    color="#fff"
+                    trackColor="rgba(255,255,255,0.3)">
+                    <Text style={[styles.analyzingPercent, { color: "#fff" }]}>
+                      {analyzingPercent}%
+                    </Text>
+                  </CalorieRing>
+                </View>
+              </View>
+
+              <View style={styles.analyzingTextContainer}>
+                <Text style={styles.analyzingTitle}>Analyzing food...</Text>
+                <View style={styles.skeletonBars}>
+                  <View
+                    style={[
+                      styles.skeletonLine,
+                      { backgroundColor: "#E5E7EB" },
+                    ]}
+                  />
+                  <View style={styles.skeletonRow}>
+                    <View
+                      style={[
+                        styles.skeletonLineShort,
+                        { backgroundColor: "#E5E7EB" },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.skeletonLineShort,
+                        { backgroundColor: "#E5E7EB" },
+                      ]}
+                    />
+                    <View
+                      style={[
+                        styles.skeletonLineShort,
+                        { backgroundColor: "#E5E7EB" },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.analyzingSubtext}>
+                  We'll notify you when done!
+                </Text>
+              </View>
+            </View>
           </View>
         )}
 
-        <View style={styles.entriesSection}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            {selectedTab === 0 ? "Today's Entries" : MEAL_TABS[selectedTab]}
-          </Text>
-          {filteredEntries.length === 0 ? (
-            <GlassCard>
-              <View style={styles.emptyState}>
-                <Ionicons
-                  name="restaurant-outline"
-                  size={32}
-                  color={colors.textTertiary}
+        {/* Render Entries */}
+        {currentLog?.entries.map((entry) => (
+          <View key={entry.id} style={styles.entryCard}>
+            <View style={styles.entryImagePlaceholder}>
+              {entry.imageUri ? (
+                <Image
+                  source={{ uri: entry.imageUri }}
+                  style={{ width: 60, height: 60, borderRadius: 12 }}
                 />
-                <Text
-                  style={[styles.emptyText, { color: colors.textSecondary }]}>
-                  No entries yet. Search or scan to add food.
-                </Text>
-              </View>
-            </GlassCard>
-          ) : (
-            filteredEntries.map((entry) => (
-              <FoodEntryCard
-                key={entry.id}
-                entry={entry}
-                colors={colors}
-                onRemove={() => handleRemoveEntry(entry)}
-              />
-            ))
-          )}
-        </View>
+              ) : (
+                <View
+                  style={{
+                    width: 60,
+                    height: 60,
+                    borderRadius: 12,
+                    backgroundColor: "#F3F4F6",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                  <Ionicons name="restaurant" size={24} color="#9CA3AF" />
+                </View>
+              )}
+            </View>
+            <View style={styles.entryInfo}>
+              <Text style={styles.entryName}>{entry.name}</Text>
+              <Text style={styles.entryTime}>
+                {new Date(entry.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Text>
+            </View>
+            <View style={styles.entryRight}>
+              <Text style={styles.entryCal}>{entry.calories} kcal</Text>
+            </View>
+          </View>
+        ))}
+
+        {!currentLog?.entries.length && !isAnalyzing ? (
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Text
+              style={{ color: "#9CA3AF", fontFamily: "Poppins_400Regular" }}>
+              No entries yet.
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
 
+      {/* Floating Action Button */}
       <Pressable
         style={({ pressed }) => [
           styles.fab,
           { transform: [{ scale: pressed ? 0.92 : 1 }] },
         ]}
-        onPress={handleScanPress}>
-        <LinearGradient
-          colors={[colors.tint, colors.accentEmerald]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.fabGradient}>
-          <Ionicons name="camera" size={26} color="#fff" />
-        </LinearGradient>
+        onPress={() => {
+          if (Platform.OS !== "web")
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push("/scanner");
+        }}>
+        <View style={styles.fabGradient}>
+          <Ionicons name="add" size={28} color="#fff" />
+        </View>
       </Pressable>
     </View>
   );
 }
 
-function FoodEntryCard({
-  entry,
-  colors,
-  onRemove,
-}: {
-  entry: FoodEntry;
-  colors: ReturnType<typeof useThemeColors>;
-  onRemove: () => void;
-}) {
-  const time = new Date(entry.timestamp);
-  const timeStr = time.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const mealIcons: Record<string, string> = {
-    breakfast: "sunny-outline",
-    lunch: "partly-sunny-outline",
-    dinner: "moon-outline",
-    snack: "cafe-outline",
-  };
-
-  return (
-    <GlassCard style={styles.entryCard}>
-      <View style={styles.entryRow}>
-        <View
-          style={[styles.entryIcon, { backgroundColor: colors.tint + "15" }]}>
-          <Ionicons
-            name={mealIcons[entry.meal] as any}
-            size={18}
-            color={colors.tint}
-          />
-        </View>
-        <View style={styles.entryInfo}>
-          <Text style={[styles.entryName, { color: colors.text }]}>
-            {entry.name}
-          </Text>
-          <Text style={[styles.entryTime, { color: colors.textTertiary }]}>
-            {entry.meal.charAt(0).toUpperCase() + entry.meal.slice(1)} ·{" "}
-            {timeStr}
-          </Text>
-        </View>
-        <View style={styles.entryRight}>
-          <Text style={[styles.entryCal, { color: colors.text }]}>
-            {entry.calories}
-          </Text>
-          <Text style={[styles.entryCalLabel, { color: colors.textTertiary }]}>
-            cal
-          </Text>
-        </View>
-        <Pressable
-          onPress={onRemove}
-          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}>
-          <Feather name="x" size={16} color={colors.textTertiary} />
-        </Pressable>
-      </View>
-      <View style={styles.entryMacros}>
-        <Text style={[styles.macroText, { color: colors.proteinColor }]}>
-          P: {entry.protein}g
-        </Text>
-        <Text style={[styles.macroText, { color: colors.carbsColor }]}>
-          C: {entry.carbs}g
-        </Text>
-        <Text style={[styles.macroText, { color: colors.fatColor }]}>
-          F: {entry.fat}g
-        </Text>
-      </View>
-    </GlassCard>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, gap: 24 },
-  title: { fontSize: 28, fontFamily: "DMSans_700Bold" },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-    borderWidth: 1,
-  },
-  searchInput: {
+  container: {
     flex: 1,
-    fontSize: 15,
-    fontFamily: "DMSans_400Regular",
-    paddingVertical: 0,
+    backgroundColor: "#F8FAFC", // Match background from image
   },
-  searchResults: { maxHeight: 280 },
-  searchResultItem: {
+  scrollContent: {
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+  header: {
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: "Poppins_700Bold",
+    color: "#000",
+  },
+  dateTabs: {
     flexDirection: "row",
+    gap: 16,
+    marginBottom: 4,
+  },
+  dateTab: {
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  searchResultInfo: { flex: 1 },
-  searchResultName: { fontSize: 15, fontFamily: "DMSans_500Medium" },
-  searchResultMacros: {
-    fontSize: 12,
-    fontFamily: "DMSans_400Regular",
-    marginTop: 2,
-  },
-  searchResultRight: { alignItems: "flex-end" },
-  searchResultCal: { fontSize: 16, fontFamily: "DMSans_700Bold" },
-  searchResultCalLabel: { fontSize: 11, fontFamily: "DMSans_400Regular" },
-  tabsScroll: { flexGrow: 0 },
-  tabsContent: { gap: 8 },
-  tab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  tabText: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
-  quickAddSection: { gap: 8 },
-  sectionLabel: {
-    fontSize: 13,
-    fontFamily: "DMSans_500Medium",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  quickAddRow: { gap: 8 },
-  quickChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
+    justifyContent: "center",
     paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
   },
-  quickChipText: { fontSize: 13, fontFamily: "DMSans_500Medium" },
-  quickChipCal: { fontSize: 12, fontFamily: "DMSans_600SemiBold" },
-  entriesSection: { gap: 8 },
-  emptyState: { alignItems: "center", gap: 8, paddingVertical: 24 },
-  emptyText: {
+  dateTabText: {
+    fontSize: 15,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#6B7280",
+  },
+  dateTabActiveText: {
+    color: "#000",
+  },
+  dateTabDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#000",
+    marginTop: 4,
+  },
+  caloriesCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 24,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  caloriesTextContainer: {
+    flex: 1,
+  },
+  caloriesNumber: {
+    fontSize: 36,
+    fontFamily: "Poppins_700Bold",
+    color: "#000",
+  },
+  caloriesLabel: {
     fontSize: 14,
-    fontFamily: "DMSans_400Regular",
-    textAlign: "center",
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+    marginTop: -4,
   },
-  entryCard: { marginBottom: 0 },
-  entryRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  entryIcon: {
-    width: 36,
-    height: 36,
+  caloriesRingContainer: {
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
+  macrosRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  macroCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  macroVal: {
+    fontSize: 16,
+    fontFamily: "Poppins_700Bold",
+    color: "#000",
+  },
+  macroLbl: {
+    fontSize: 11,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+    marginBottom: 16,
+  },
+  macroIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  macroIconBgInner: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  entryInfo: { flex: 1 },
-  entryName: { fontSize: 15, fontFamily: "DMSans_600SemiBold" },
-  entryTime: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 },
-  entryRight: { alignItems: "flex-end", marginRight: 8 },
-  entryCal: { fontSize: 16, fontFamily: "DMSans_700Bold" },
-  entryCalLabel: { fontSize: 11, fontFamily: "DMSans_400Regular" },
-  entryMacros: { flexDirection: "row", gap: 16, marginTop: 8, paddingLeft: 48 },
-  macroText: { fontSize: 12, fontFamily: "DMSans_500Medium" },
-  fab: {
-    position: "absolute",
-    right: 20,
-    bottom: 100,
-    zIndex: 10,
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#000",
+    marginTop: 8,
   },
-  fabGradient: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+  analyzingCard: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  analyzingContent: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  analyzingImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    overflow: "hidden",
+    position: "relative",
+  },
+  analyzingImage: {
+    width: "100%",
+    height: "100%",
+  },
+  analyzingImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+  },
+  analyzingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#6C5CE7",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+  },
+  analyzingPercent: {
+    fontSize: 12,
+    fontFamily: "Poppins_700Bold",
+  },
+  analyzingTextContainer: {
+    flex: 1,
+    justifyContent: "center",
+  },
+  analyzingTitle: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#000",
+    marginBottom: 8,
+  },
+  skeletonBars: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  skeletonLine: {
+    height: 4,
+    borderRadius: 2,
+    width: "80%",
+  },
+  skeletonRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  skeletonLineShort: {
+    height: 4,
+    borderRadius: 2,
+    width: "25%",
+  },
+  analyzingSubtext: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: "#9CA3AF",
+  },
+  entryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 2,
+  },
+  entryImagePlaceholder: {
+    marginRight: 12,
+  },
+  entryInfo: {
+    flex: 1,
+  },
+  entryName: {
+    fontSize: 15,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#000",
+  },
+  entryTime: {
+    fontSize: 12,
+    fontFamily: "Poppins_400Regular",
+    color: "#6B7280",
+  },
+  entryRight: {
+    alignItems: "flex-end",
+  },
+  entryCal: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#000",
+  },
+  entryCalLabel: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: "#9CA3AF",
+  },
+  fab: {
+    position: "absolute",
+    right: 24,
+    bottom: 90,
+    zIndex: 100,
+  },
+  fabGradient: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#0F172A",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
   },
 });

@@ -5,443 +5,421 @@ import {
   View,
   ScrollView,
   Pressable,
-  TextInput,
-  useColorScheme,
   Platform,
+  Image,
+  ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
-import { GlassCard } from "@/components/GlassCard";
-import { CalorieRing } from "@/components/CalorieRing";
+import { LinearGradient } from "expo-linear-gradient";
 
 const MOCK_SCAN = {
-  name: "Grilled Chicken Salad",
-  confidence: 92,
-  calories: 420,
-  protein: 38,
-  carbs: 15,
-  fat: 22,
-  fiber: 5,
-  sugar: 4,
-  sodium: 580,
+  name: "Turkey Sandwich With Potato Chips",
+  calories: 460,
+  carbs: 45,
+  protein: 25,
+  fat: 20,
+  score: 7,
+  time: "2:10 PM",
+  image:
+    "https://images.unsplash.com/photo-1619096252214-ef06c45683e3?auto=format&fit=crop&q=80&w=1000",
 };
 
 export default function ScanResultScreen() {
-  const colorScheme = useColorScheme();
-  const colors = useThemeColors(colorScheme);
+  const colors = useThemeColors("light");
   const insets = useSafeAreaInsets();
-  const { addFoodEntry } = useNutrition();
+  const { addFoodEntry, scanResult } = useNutrition();
 
-  const [foodName, setFoodName] = useState(MOCK_SCAN.name);
-  const [calories, setCalories] = useState(String(MOCK_SCAN.calories));
-  const [protein, setProtein] = useState(String(MOCK_SCAN.protein));
-  const [carbs, setCarbs] = useState(String(MOCK_SCAN.carbs));
-  const [fat, setFat] = useState(String(MOCK_SCAN.fat));
-  const [selectedMeal, setSelectedMeal] = useState<
-    "breakfast" | "lunch" | "dinner" | "snack"
-  >("lunch");
+  const currentScan = scanResult || MOCK_SCAN;
+
+  const [quantity, setQuantity] = useState(1);
 
   function handleSave() {
     if (Platform.OS !== "web")
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addFoodEntry({
-      name: foodName,
-      calories: parseInt(calories, 10) || 0,
-      protein: parseInt(protein, 10) || 0,
-      carbs: parseInt(carbs, 10) || 0,
-      fat: parseInt(fat, 10) || 0,
-      meal: selectedMeal,
-      confidence: MOCK_SCAN.confidence,
+      name: currentScan.name,
+      calories: currentScan.calories * quantity,
+      protein: currentScan.protein * quantity,
+      carbs: currentScan.carbs * quantity,
+      fat: currentScan.fat * quantity,
+      meal: "lunch",
+      confidence: 95,
+      imageUri: currentScan.image,
     });
-    router.back();
+    // Let's assume going back returns to dashboard where it's saved.
+    router.replace("/(tabs)");
   }
 
   function handleClose() {
     router.back();
   }
 
-  const meals = [
-    {
-      key: "breakfast" as const,
-      icon: "sunny-outline" as const,
-      label: "Breakfast",
-    },
-    {
-      key: "lunch" as const,
-      icon: "partly-sunny-outline" as const,
-      label: "Lunch",
-    },
-    { key: "dinner" as const, icon: "moon-outline" as const, label: "Dinner" },
-    { key: "snack" as const, icon: "cafe-outline" as const, label: "Snack" },
-  ];
+  function modifyQuantity(amount: number) {
+    if (Platform.OS !== "web") Haptics.selectionAsync();
+    setQuantity((prev) => Math.max(1, prev + amount));
+  }
 
-  const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const MacroCard = ({
+    icon,
+    label,
+    value,
+    color,
+  }: {
+    icon: any;
+    label: string;
+    value: string;
+    color: string;
+  }) => (
+    <View style={styles.macroCard}>
+      <View style={styles.macroCardContent}>
+        <View style={[styles.macroIconBg, { backgroundColor: color + "15" }]}>
+          {icon}
+        </View>
+        <View style={styles.macroTextCol}>
+          <Text style={styles.macroLabel}>{label}</Text>
+          <Text style={styles.macroValue}>{value}</Text>
+        </View>
+      </View>
+      <Ionicons
+        name="pencil"
+        size={12}
+        color="#9CA3AF"
+        style={styles.editIcon}
+      />
+    </View>
+  );
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={["#dfffa2ff", "#f3f4d4ff"]}
-        style={StyleSheet.absoluteFill}
-      />
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
-            paddingBottom: insets.bottom + 100,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <Pressable
-            onPress={handleClose}
-            style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-            <Ionicons name="close" size={28} color={colors.text} />
+      {/* Background Image Header */}
+      <ImageBackground
+        source={{ uri: currentScan.image }}
+        style={styles.imageBackground}
+        resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(0,0,0,0.6)", "transparent", "transparent"]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+          <Pressable style={styles.headerBtn} onPress={handleClose}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            Scan Result
-          </Text>
-          <View style={{ width: 28 }} />
+          <Text style={styles.headerTitle}>Nutrition</Text>
+          <Pressable style={styles.headerBtn}>
+            <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+          </Pressable>
         </View>
+      </ImageBackground>
 
-        <GlassCard style={styles.imagePreview}>
-          <LinearGradient
-            colors={[
-              colorScheme === "dark"
-                ? "rgba(139,124,247,0.2)"
-                : "rgba(108,92,231,0.1)",
-              colorScheme === "dark"
-                ? "rgba(0,217,165,0.15)"
-                : "rgba(0,184,148,0.08)",
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Ionicons name="image" size={48} color={colors.tint} />
-          <Text style={[styles.previewText, { color: colors.textSecondary }]}>
-            AI Food Recognition
-          </Text>
-          <View style={styles.confidenceRow}>
-            <View
-              style={[
-                styles.confidenceBadge,
-                { backgroundColor: colors.accentEmerald + "20" },
-              ]}>
-              <Ionicons
-                name="checkmark-circle"
-                size={14}
-                color={colors.accentEmerald}
-              />
-              <Text
-                style={[
-                  styles.confidenceText,
-                  { color: colors.accentEmerald },
-                ]}>
-                {MOCK_SCAN.confidence}% confidence
-              </Text>
+      {/* Bottom Sheet Overlay */}
+      <View style={styles.bottomSheetWrapper}>
+        <ScrollView
+          style={styles.bottomSheet}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
+          showsVerticalScrollIndicator={false}>
+          <Text style={styles.timeText}>{currentScan.time}</Text>
+
+          <View style={styles.titleRow}>
+            <Text style={styles.foodTitle}>{currentScan.name}</Text>
+            <View style={styles.quantityPicker}>
+              <Pressable
+                onPress={() => modifyQuantity(-1)}
+                style={styles.qtyBtn}>
+                <Ionicons name="remove" size={20} color={colors.text} />
+              </Pressable>
+              <Text style={styles.qtyText}>{quantity}</Text>
+              <Pressable
+                onPress={() => modifyQuantity(1)}
+                style={styles.qtyBtn}>
+                <Ionicons name="add" size={20} color={colors.text} />
+              </Pressable>
             </View>
           </View>
-        </GlassCard>
 
-        <GlassCard>
-          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
-            Food Name
-          </Text>
-          <TextInput
-            style={[
-              styles.nameInput,
-              { color: colors.text, borderColor: colors.border },
-            ]}
-            value={foodName}
-            onChangeText={setFoodName}
-            placeholder="Enter food name"
-            placeholderTextColor={colors.textTertiary}
-          />
-        </GlassCard>
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Meal Category
-        </Text>
-        <View style={styles.mealRow}>
-          {meals.map((m) => (
-            <Pressable
-              key={m.key}
-              onPress={() => {
-                setSelectedMeal(m.key);
-                if (Platform.OS !== "web") Haptics.selectionAsync();
-              }}
-              style={({ pressed }) => [
-                { flex: 1, opacity: pressed ? 0.8 : 1 },
-              ]}>
-              <GlassCard
-                style={[
-                  styles.mealCard,
-                  selectedMeal === m.key && {
-                    borderColor: colors.tint,
-                    borderWidth: 2,
-                  },
-                ]}>
-                <Ionicons
-                  name={m.icon}
-                  size={20}
-                  color={
-                    selectedMeal === m.key ? colors.tint : colors.textSecondary
-                  }
-                />
-                <Text
-                  style={[
-                    styles.mealLabel,
-                    {
-                      color:
-                        selectedMeal === m.key
-                          ? colors.tint
-                          : colors.textSecondary,
-                    },
-                  ]}>
-                  {m.label}
-                </Text>
-              </GlassCard>
-            </Pressable>
-          ))}
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Nutrition
-        </Text>
-        <GlassCard>
-          <View style={styles.calorieCenter}>
-            <CalorieRing
-              progress={0.65}
-              size={100}
-              strokeWidth={8}
-              color={colors.tint}
-              trackColor={colors.progressRingBg}>
-              <TextInput
-                style={[styles.calInput, { color: colors.text }]}
-                value={calories}
-                onChangeText={setCalories}
-                keyboardType="numeric"
-              />
-              <Text style={[styles.calLabel, { color: colors.textTertiary }]}>
-                cal
-              </Text>
-            </CalorieRing>
-          </View>
-
-          <View style={styles.macroGrid}>
-            <NutrientInput
-              label="Protein"
-              value={protein}
-              onChange={setProtein}
-              unit="g"
-              color={colors.proteinColor}
-              colors={colors}
+          <View style={styles.macrosGrid}>
+            <MacroCard
+              icon={<Ionicons name="flame" size={16} color="#000" />}
+              label="Calories"
+              value={String(currentScan.calories * quantity)}
+              color="#000000"
             />
-            <NutrientInput
+            <MacroCard
+              icon={<Ionicons name="pizza" size={16} color="#E8A35A" />}
               label="Carbs"
-              value={carbs}
-              onChange={setCarbs}
-              unit="g"
-              color={colors.carbsColor}
-              colors={colors}
+              value={`${currentScan.carbs * quantity}g`}
+              color="#E8A35A"
             />
-            <NutrientInput
+            <MacroCard
+              icon={<Ionicons name="fish" size={16} color="#EC7063" />}
+              label="Protein"
+              value={`${currentScan.protein * quantity}g`}
+              color="#EC7063"
+            />
+            <MacroCard
+              icon={<Ionicons name="water" size={16} color="#5DADE2" />}
               label="Fat"
-              value={fat}
-              onChange={setFat}
-              unit="g"
-              color={colors.fatColor}
-              colors={colors}
+              value={`${currentScan.fat * quantity}g`}
+              color="#5DADE2"
             />
           </View>
 
-          <View
-            style={[styles.detailDivider, { backgroundColor: colors.border }]}
-          />
-          <View style={styles.detailRow}>
-            <DetailItem
-              label="Fiber"
-              value={`${MOCK_SCAN.fiber}g`}
-              colors={colors}
-            />
-            <DetailItem
-              label="Sugar"
-              value={`${MOCK_SCAN.sugar}g`}
-              colors={colors}
-            />
-            <DetailItem
-              label="Sodium"
-              value={`${MOCK_SCAN.sodium}mg`}
-              colors={colors}
-            />
+          <View style={styles.healthScoreCard}>
+            <View style={styles.healthScoreHeader}>
+              <View
+                style={[
+                  styles.macroIconBg,
+                  { backgroundColor: "#D7BDE2" + "30" },
+                ]}>
+                <Ionicons name="heart" size={16} color="#A569BD" />
+              </View>
+              <Text style={styles.healthScoreLabel}>Health Score</Text>
+              <View style={{ flex: 1 }} />
+              <Text style={styles.healthScoreValue}>
+                {currentScan.score}/10
+              </Text>
+            </View>
+            <View style={styles.healthScoreBarBg}>
+              <View
+                style={[
+                  styles.healthScoreBarFill,
+                  { width: `${currentScan.score * 10}%` },
+                ]}
+              />
+            </View>
           </View>
-        </GlassCard>
+        </ScrollView>
 
-        <Pressable
-          onPress={handleSave}
-          style={({ pressed }) => [
-            styles.saveButton,
-            { transform: [{ scale: pressed ? 0.97 : 1 }] },
-          ]}>
-          <LinearGradient
-            colors={[colors.tint, colors.accentEmerald]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.saveGradient}>
-            <Ionicons name="checkmark" size={22} color="#fff" />
-            <Text style={styles.saveText}>Add to Food Log</Text>
-          </LinearGradient>
-        </Pressable>
-      </ScrollView>
-    </View>
-  );
-}
-
-function NutrientInput({
-  label,
-  value,
-  onChange,
-  unit,
-  color,
-  colors,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  unit: string;
-  color: string;
-  colors: ReturnType<typeof useThemeColors>;
-}) {
-  return (
-    <View style={nutrientStyles.container}>
-      <View style={[nutrientStyles.dot, { backgroundColor: color }]} />
-      <Text style={[nutrientStyles.label, { color: colors.textSecondary }]}>
-        {label}
-      </Text>
-      <View style={nutrientStyles.inputRow}>
-        <TextInput
-          style={[
-            nutrientStyles.input,
-            { color: colors.text, borderColor: color + "40" },
-          ]}
-          value={value}
-          onChangeText={onChange}
-          keyboardType="numeric"
-        />
-        <Text style={[nutrientStyles.unit, { color: colors.textTertiary }]}>
-          {unit}
-        </Text>
+        {/* Footer Actions */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
+          <Pressable style={styles.fixButton}>
+            <Ionicons name="color-wand" size={18} color={colors.text} />
+            <Text style={styles.fixButtonText}>Fix Results</Text>
+          </Pressable>
+          <Pressable style={styles.doneButton} onPress={handleSave}>
+            <Text style={styles.doneButtonText}>Done</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
 }
 
-function DetailItem({
-  label,
-  value,
-  colors,
-}: {
-  label: string;
-  value: string;
-  colors: ReturnType<typeof useThemeColors>;
-}) {
-  return (
-    <View style={detailStyles.item}>
-      <Text style={[detailStyles.label, { color: colors.textTertiary }]}>
-        {label}
-      </Text>
-      <Text style={[detailStyles.value, { color: colors.textSecondary }]}>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
-const nutrientStyles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", gap: 4 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  label: { fontSize: 12, fontFamily: "DMSans_500Medium" },
-  inputRow: { flexDirection: "row", alignItems: "center", gap: 2 },
-  input: {
-    fontSize: 20,
-    fontFamily: "DMSans_700Bold",
-    borderBottomWidth: 1.5,
-    paddingVertical: 2,
-    minWidth: 40,
-    textAlign: "center",
-  },
-  unit: { fontSize: 13, fontFamily: "DMSans_400Regular" },
-});
-
-const detailStyles = StyleSheet.create({
-  item: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontFamily: "DMSans_400Regular" },
-  value: { fontSize: 14, fontFamily: "DMSans_600SemiBold" },
-});
-
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, gap: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  imageBackground: {
+    width: "100%",
+    height: "55%", // Takes up top half
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
+    zIndex: 10,
   },
-  headerTitle: { fontSize: 18, fontFamily: "DMSans_700Bold" },
-  imagePreview: {
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 32,
-    overflow: "hidden",
+    justifyContent: "center",
   },
-  previewText: { fontSize: 14, fontFamily: "DMSans_500Medium" },
-  confidenceRow: { marginTop: 4 },
-  confidenceBadge: {
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontFamily: "Poppins_600SemiBold",
+  },
+  bottomSheetWrapper: {
+    flex: 1,
+    marginTop: -40, // overlap the image
+  },
+  bottomSheet: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+  },
+  timeText: {
+    fontSize: 12,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+    marginBottom: 8,
+  },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 32,
+    gap: 16,
+  },
+  foodTitle: {
+    flex: 1,
+    fontSize: 22,
+    fontFamily: "Poppins_700Bold",
+    color: "#111",
+    lineHeight: 30,
+  },
+  quantityPicker: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 100,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    borderRadius: 20,
   },
-  confidenceText: { fontSize: 13, fontFamily: "DMSans_600SemiBold" },
-  fieldLabel: { fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 },
-  nameInput: {
+  qtyBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyText: {
     fontSize: 16,
-    fontFamily: "DMSans_600SemiBold",
-    borderBottomWidth: 1,
-    paddingVertical: 6,
-  },
-  sectionTitle: { fontSize: 18, fontFamily: "DMSans_700Bold" },
-  mealRow: { flexDirection: "row", gap: 8 },
-  mealCard: { alignItems: "center", gap: 4, paddingVertical: 12 },
-  mealLabel: { fontSize: 11, fontFamily: "DMSans_500Medium" },
-  calorieCenter: { alignItems: "center", marginBottom: 20 },
-  calInput: {
-    fontSize: 24,
-    fontFamily: "DMSans_700Bold",
+    fontFamily: "Poppins_600SemiBold",
+    marginHorizontal: 8,
+    minWidth: 16,
     textAlign: "center",
-    minWidth: 50,
   },
-  calLabel: { fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: -2 },
-  macroGrid: { flexDirection: "row", gap: 12 },
-  detailDivider: { height: 1, marginVertical: 14 },
-  detailRow: { flexDirection: "row" },
-  saveButton: { marginTop: 8 },
-  saveGradient: {
+  macrosGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 16,
+  },
+  macroCard: {
+    width: "48%",
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  macroCardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  macroIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  macroTextCol: {
+    justifyContent: "center",
+  },
+  macroLabel: {
+    fontSize: 12,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+    marginBottom: 2,
+  },
+  macroValue: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: "#111",
+  },
+  editIcon: {
+    alignSelf: "flex-end",
+    marginBottom: 4,
+  },
+  healthScoreCard: {
+    backgroundColor: "#F9FAFB",
+    borderRadius: 20,
+    padding: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  healthScoreHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    gap: 12,
+  },
+  healthScoreLabel: {
+    fontSize: 14,
+    fontFamily: "Poppins_500Medium",
+    color: "#111",
+  },
+  healthScoreValue: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: "#111",
+  },
+  healthScoreBarBg: {
+    height: 6,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  healthScoreBarFill: {
+    height: "100%",
+    backgroundColor: "#9ac255", // Using the tint green
+    borderRadius: 3,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    gap: 16,
+  },
+  fixButton: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 8,
   },
-  saveText: { fontSize: 16, fontFamily: "DMSans_700Bold", color: "#fff" },
+  fixButtonText: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#111",
+  },
+  doneButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 100,
+    backgroundColor: "#111",
+  },
+  doneButtonText: {
+    fontSize: 16,
+    fontFamily: "Poppins_700Bold",
+    color: "#fff",
+  },
 });

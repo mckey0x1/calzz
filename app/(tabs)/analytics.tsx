@@ -158,7 +158,7 @@ export default function AnalyticsScreen() {
             <Text style={[styles.chartAvg, { color: colors.textSecondary }]}>
               Avg:{" "}
               <Text
-                style={{ color: colors.text, fontFamily: "DMSans_700Bold" }}>
+                style={{ color: colors.text, fontFamily: "Poppins_700Bold" }}>
                 {avgCalories} cal
               </Text>
             </Text>
@@ -417,17 +417,17 @@ function MacroPieSlice({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, gap: 24 },
-  title: { fontSize: 28, fontFamily: "DMSans_700Bold", marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontFamily: "DMSans_700Bold", marginTop: 8 },
+  title: { fontSize: 28, fontFamily: "Poppins_700Bold", marginBottom: 4 },
+  sectionTitle: { fontSize: 18, fontFamily: "Poppins_700Bold", marginTop: 8 },
   healthScoreCard: { overflow: "hidden" },
   healthScoreContent: { flexDirection: "row", alignItems: "center", gap: 20 },
-  healthScoreValue: { fontSize: 28, fontFamily: "DMSans_700Bold" },
+  healthScoreValue: { fontSize: 28, fontFamily: "Poppins_700Bold" },
   healthScoreInfo: { flex: 1, gap: 6 },
   healthScoreHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  healthScoreLabel: { fontSize: 14, fontFamily: "DMSans_600SemiBold" },
+  healthScoreLabel: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
   healthScoreDesc: {
     fontSize: 13,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Poppins_400Regular",
     lineHeight: 18,
   },
   chartHeader: {
@@ -436,9 +436,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 12,
   },
-  chartAvg: { fontSize: 13, fontFamily: "DMSans_400Regular" },
+  chartAvg: { fontSize: 13, fontFamily: "Poppins_400Regular" },
   goalLine: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  goalLineText: { fontSize: 11, fontFamily: "DMSans_600SemiBold" },
+  goalLineText: { fontSize: 11, fontFamily: "Poppins_600SemiBold" },
   barChart: { alignItems: "center" },
   barChartBars: {
     flexDirection: "row",
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   barColumn: { flex: 1, alignItems: "center", gap: 6 },
   barWrapper: { height: 120, justifyContent: "flex-end" },
   bar: { width: 24, minHeight: 4 },
-  barLabel: { fontSize: 11, fontFamily: "DMSans_500Medium" },
+  barLabel: { fontSize: 11, fontFamily: "Poppins_500Medium" },
   lineChart: { alignItems: "center", paddingVertical: 8 },
   weightLabels: {
     flexDirection: "row",
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     width: "100%",
     marginTop: 8,
   },
-  weightLabel: { fontSize: 12, fontFamily: "DMSans_500Medium" },
+  weightLabel: { fontSize: 12, fontFamily: "Poppins_500Medium" },
   macroBalanceRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -466,8 +466,8 @@ const styles = StyleSheet.create({
   },
   macroSlice: { alignItems: "center", gap: 4 },
   macroSliceDot: { width: 10, height: 10, borderRadius: 5 },
-  macroSliceLabel: { fontSize: 12, fontFamily: "DMSans_400Regular" },
-  macroSliceValue: { fontSize: 18, fontFamily: "DMSans_700Bold" },
+  macroSliceLabel: { fontSize: 12, fontFamily: "Poppins_400Regular" },
+  macroSliceValue: { fontSize: 18, fontFamily: "Poppins_700Bold" },
   macroBalanceBar: {
     height: 10,
     borderRadius: 5,
@@ -477,10 +477,10 @@ const styles = StyleSheet.create({
   macroSegment: { height: "100%" },
   summaryRow: { flexDirection: "row", gap: 12 },
   summaryCard: { flex: 1, alignItems: "center", gap: 6 },
-  summaryValue: { fontSize: 22, fontFamily: "DMSans_700Bold" },
+  summaryValue: { fontSize: 22, fontFamily: "Poppins_700Bold" },
   summaryLabel: {
     fontSize: 12,
-    fontFamily: "DMSans_400Regular",
+    fontFamily: "Poppins_400Regular",
     textAlign: "center",
   },
 });
