@@ -11,7 +11,10 @@ import {
   NativeScrollEvent,
   ActivityIndicator,
   Modal,
+  Image,
+  Animated,
 } from "react-native";
+import * as Network from "expo-network";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -21,27 +24,26 @@ import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { GlassCard } from "@/components/GlassCard";
 
-const SLIDES = [
-  {
+const SLIDES = [  {
     id: "1",
     title: "AI Nutrition Tracking",
     description:
       "Simply snap a photo of your food. Our advanced AI instantly analyzes calories and macros for you.",
-    icon: "camera-outline" as const,
+    image: require("../assets/images/IMG_0290.png"),
   },
   {
     id: "2",
     title: "Personalized Goals",
     description:
       "Set your targets for weight, diet preferences, and hydration to get curated daily check-ins.",
-    icon: "trophy-outline" as const,
+    image: require("../assets/images/IMG_0291.png"),
   },
   {
     id: "3",
     title: "Smart Insights",
     description:
       "Receive real-time health scores and intelligent recommendations based on your progress.",
-    icon: "sparkles-outline" as const,
+    image: require("../assets/images/IMG_0292.png"),
   },
 ];
 
@@ -54,6 +56,27 @@ export default function OnboardingScreen() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  const [toastMessage, setToastMessage] = useState("");
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    fadeAnim.setValue(0);
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.delay(2000),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setToastMessage(""));
+  };
 
   useEffect(() => {
     // Automatically skip onboarding if user is logged in
@@ -68,9 +91,18 @@ export default function OnboardingScreen() {
     setActiveIndex(index);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    // if (activeIndex === SLIDES.length - 1) {
+    //   const networkState = await Network.getNetworkStateAsync();
+    //   if (!networkState.isConnected && networkState.isConnected !== null) {
+    //     showToast("No network connection. Please check your internet.");
+    //     return;
+    //   }
+    // }
+
     if (activeIndex < SLIDES.length - 1) {
       scrollRef.current?.scrollTo({
         x: (activeIndex + 1) * width,
@@ -81,14 +113,30 @@ export default function OnboardingScreen() {
     }
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    const networkState = await Network.getNetworkStateAsync();
+    if (!networkState.isConnected && networkState.isConnected !== null) {
+      showToast("No network connection. Please check your internet.");
+      return;
+    }
+
     setShowBottomSheet(true);
   };
 
   return (
     <View style={styles.container}>
+      {toastMessage ? (
+        <Animated.View
+          style={[styles.toastContainer, { opacity: fadeAnim }]}
+          pointerEvents="none">
+          <Ionicons name="wifi-outline" size={20} color="#fff" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      ) : null}
+
       <LinearGradient
         colors={["#dfffa2ff", "#f3f4d4ff"]}
         style={StyleSheet.absoluteFill}
@@ -117,9 +165,11 @@ export default function OnboardingScreen() {
                   { backgroundColor: colors.tint + "40" },
                 ]}
               />
-              <GlassCard style={styles.iconCard}>
-                <Ionicons name={slide.icon} size={64} color={colors.tint} />
-              </GlassCard>
+              <Image
+                source={slide.image}
+                style={styles.slideImage}
+                resizeMode="cover"
+              />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.title, { color: colors.text }]}>
@@ -191,7 +241,11 @@ export default function OnboardingScreen() {
               ]}>
               Already have an account?{" "}
               <Text
-                style={{ color: colors.tint, fontFamily: "Poppins_700Bold" }}>
+                style={{
+                  color: colors.tint,
+                  fontFamily: "Poppins_700Bold",
+                  textDecorationLine: "underline",
+                }}>
                 Sign in
               </Text>
             </Text>
@@ -280,6 +334,25 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  toastContainer: {
+    position: "absolute",
+    bottom: 300,
+    left: 20,
+    right: 20,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    zIndex: 999,
+  },
+  toastText: {
+    color: "#fff",
+    fontFamily: "Poppins_500Medium",
+    fontSize: 14,
+    flex: 1,
+  },
   slide: {
     flex: 1,
     alignItems: "center",
@@ -295,15 +368,15 @@ const styles = StyleSheet.create({
   },
   iconHalo: {
     position: "absolute",
-    width: 240,
-    height: 240,
-    borderRadius: 120,
+    width: 340,
+    height: 340,
+    borderRadius: 170,
   },
   iconHaloInner: {
     position: "absolute",
-    width: 180,
-    height: 180,
-    borderRadius: 90,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
   },
   iconCard: {
     width: 120,
@@ -311,6 +384,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 36,
+  },
+  slideImage: {
+    width: 280,
+    height: 200,
+    borderRadius: 20,
+    overflow: "hidden",
   },
   textContainer: {
     alignItems: "center",

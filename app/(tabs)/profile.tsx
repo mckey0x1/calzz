@@ -1,181 +1,154 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   Pressable,
-  TextInput,
+  ImageBackground,
   Image,
   useColorScheme,
   Platform,
-  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
 import { useAuth } from "@/lib/auth-context";
-import { GlassCard } from "@/components/GlassCard";
 import { CalorieRing } from "@/components/CalorieRing";
-
-const DIET_OPTIONS = [
-  {
-    key: "balanced",
-    label: "Balanced",
-    icon: "nutrition-outline" as const,
-    desc: "Equal macro distribution",
-  },
-  {
-    key: "high-protein",
-    label: "High Protein",
-    icon: "barbell-outline" as const,
-    desc: "Focus on muscle building",
-  },
-  {
-    key: "keto",
-    label: "Keto",
-    icon: "flame-outline" as const,
-    desc: "Low carb, high fat",
-  },
-  {
-    key: "vegan",
-    label: "Vegan",
-    icon: "leaf-outline" as const,
-    desc: "Plant-based nutrition",
-  },
-] as const;
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  const {
-    goals,
-    updateGoals,
-    setFirebaseUid,
-    totalCalories,
-    totalProtein,
-    totalCarbs,
-    totalFat,
-  } = useNutrition();
-  const { user, userProfile, isSigningIn, signInWithGoogle, signOut } =
-    useAuth();
 
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const { goals, totalCalories, totalProtein, totalCarbs, totalFat } =
+    useNutrition();
+  const { user, signOut, deleteAccount } = useAuth();
 
-  useEffect(() => {
-    setFirebaseUid(user?.uid || null);
-  }, [user?.uid]);
-
-  function startEdit(field: string, currentValue: number) {
-    setEditingField(field);
-    setEditValue(String(currentValue));
-  }
-
-  function saveEdit(field: string) {
-    const val = parseInt(editValue, 10);
-    if (!isNaN(val) && val > 0) {
-      if (Platform.OS !== "web")
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      updateGoals({ [field]: val });
-    }
-    setEditingField(null);
-  }
-
-  function selectDiet(diet: string) {
+  const handleSignOut = async () => {
     if (Platform.OS !== "web")
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const presets: Record<string, Partial<typeof goals>> = {
-      balanced: {
-        dietPreference: "balanced",
-        proteinGoal: 150,
-        carbsGoal: 200,
-        fatGoal: 65,
-      },
-      "high-protein": {
-        dietPreference: "high-protein",
-        proteinGoal: 200,
-        carbsGoal: 150,
-        fatGoal: 60,
-      },
-      keto: {
-        dietPreference: "keto",
-        proteinGoal: 120,
-        carbsGoal: 50,
-        fatGoal: 130,
-      },
-      vegan: {
-        dietPreference: "vegan",
-        proteinGoal: 100,
-        carbsGoal: 250,
-        fatGoal: 65,
-      },
-    };
-    updateGoals(presets[diet] || {});
-  }
+    await signOut();
+  };
 
-  const completionScore = Math.min(
-    100,
-    Math.round(
-      ((Math.min(totalCalories / goals.dailyCalories, 1) +
-        Math.min(totalProtein / goals.proteinGoal, 1) +
-        Math.min(totalCarbs / goals.carbsGoal, 1) +
-        Math.min(totalFat / goals.fatGoal, 1)) /
-        4) *
-        100,
-    ),
-  );
+  const handleDeleteAccount = async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
 
-  const aiRecommendations = [
-    goals.dietPreference === "keto"
-      ? "Add more healthy fats like avocado, nuts, and olive oil to your meals."
-      : "Consider adding a post-workout protein shake to hit your protein target.",
-    totalCalories < goals.dailyCalories * 0.5
-      ? "You're under-eating today. Make sure to have a substantial meal soon."
-      : "Great calorie management. Keep portion sizes consistent.",
-    "Aim for at least 25g of fiber daily from whole grains and vegetables.",
+    Alert.alert(
+      "Delete Account?",
+      "Are you sure you want to completely delete your account? This will erase all your data.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              router.replace("/");
+            } catch (err) {
+              console.error(err);
+              Alert.alert(
+                "Error",
+                "Could not delete your account. Try signing in again first.",
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const menuGroup1 = [
+    {
+      id: "personal",
+      title: "Personal details",
+      icon: "id-card-outline",
+      onPress: () => {},
+    },
+    {
+      id: "macros",
+      title: "Adjust macronutrients",
+      icon: "sync-outline",
+      onPress: () => {},
+    },
+    {
+      id: "weight",
+      title: "Goal & current weight",
+      icon: "flag-outline",
+      onPress: () => {},
+    },
   ];
 
-  const webTopInset = Platform.OS === "web" ? 67 : 0;
+  const menuGroup2 = [
+    {
+      id: "terms",
+      title: "Terms and Conditions",
+      icon: "document-text-outline",
+      onPress: () => router.push("/terms"),
+    },
+    {
+      id: "privacy",
+      title: "Privacy Policy",
+      icon: "shield-checkmark-outline",
+      onPress: () => router.push("/privacy-policy"),
+    },
+    {
+      id: "support",
+      title: "Support Email",
+      icon: "mail-outline",
+      onPress: () => {},
+    },
+    {
+      id: "feature",
+      title: "Feature Request",
+      icon: "megaphone-outline",
+      onPress: () => {},
+    },
+    {
+      id: "delete",
+      title: "Delete Account?",
+      icon: "person-remove-outline",
+      onPress: () => handleDeleteAccount(),
+    },
+  ];
+
+  const webTopInset = Platform.OS === "web" ? 60 : 0;
+
+  // Calculate remaining calories and macros
+  const caloriesLeft = Math.max(0, goals.dailyCalories - totalCalories);
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient */}
       <LinearGradient
         colors={["#dfffa2ff", "#f3f4d4ff"]}
         style={StyleSheet.absoluteFill}
       />
+
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
-            paddingBottom: Platform.OS === "web" ? 34 + 84 : 100,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 20,
+            paddingBottom: insets.bottom + 100,
           },
         ]}
         showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Profile & Goals
-        </Text>
+        {/* Header */}
+        <Text style={[styles.mainTitle, { color: colors.text }]}>Profile</Text>
 
-        <GlassCard style={styles.profileHeader}>
-          <LinearGradient
-            colors={[
-              colorScheme === "dark"
-                ? "rgba(139,124,247,0.12)"
-                : "rgba(108,92,231,0.06)",
-              colorScheme === "dark"
-                ? "rgba(0,217,165,0.08)"
-                : "rgba(0,184,148,0.04)",
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+        {/* Profile Info Card */}
+        <View
+          style={[styles.card, { backgroundColor: colors.surfaceElevated }]}>
           <View style={styles.profileRow}>
             {user?.photoURL ? (
               <Image
@@ -183,594 +156,485 @@ export default function ProfileScreen() {
                 style={styles.avatarImage}
               />
             ) : (
-              <View
-                style={[
-                  styles.avatar,
-                  { backgroundColor: colors.tint + "20" },
-                ]}>
-                <Ionicons name="person" size={28} color={colors.tint} />
+              <View style={[styles.avatar, { backgroundColor: "#F4F4F6" }]}>
+                <Ionicons name="person-outline" size={24} color="#1A1A1A" />
               </View>
             )}
             <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: colors.text }]}>
-                {user?.displayName || "Your Profile"}
+              <Text style={styles.profileName}>
+                {user?.displayName || "munna"}
               </Text>
-              <Text
-                style={[styles.profileSub, { color: colors.textSecondary }]}>
-                {user?.email ||
-                  goals.dietPreference.charAt(0).toUpperCase() +
-                    goals.dietPreference.slice(1) +
-                    " Diet"}
-              </Text>
-            </View>
-            <CalorieRing
-              progress={completionScore / 100}
-              size={52}
-              strokeWidth={5}
-              color={colors.accentEmerald}
-              trackColor={colors.progressRingBg}>
-              <Text style={[styles.profileScore, { color: colors.text }]}>
-                {completionScore}%
-              </Text>
-            </CalorieRing>
-          </View>
-        </GlassCard>
-
-        {!user ? (
-          <Pressable
-            onPress={signInWithGoogle}
-            disabled={isSigningIn}
-            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>
-            <GlassCard style={styles.signInCard}>
-              <LinearGradient
-                colors={["rgba(108,92,231,0.1)", "rgba(0,184,148,0.06)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              {isSigningIn ? (
-                <ActivityIndicator color={colors.tint} />
-              ) : (
-                <>
-                  <View style={styles.googleIconWrap}>
-                    <Ionicons name="logo-google" size={20} color="#fff" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.signInTitle, { color: colors.text }]}>
-                      Sign in with Google
-                    </Text>
-                    <Text
-                      style={[
-                        styles.signInSub,
-                        { color: colors.textSecondary },
-                      ]}>
-                      Sync your data across devices
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={18}
-                    color={colors.textTertiary}
-                  />
-                </>
-              )}
-            </GlassCard>
-          </Pressable>
-        ) : (
-          <GlassCard style={styles.syncBadge}>
-            <Ionicons
-              name="cloud-done"
-              size={16}
-              color={colors.accentEmerald}
-            />
-            <Text style={[styles.syncText, { color: colors.accentEmerald }]}>
-              Data synced to cloud
-            </Text>
-          </GlassCard>
-        )}
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Daily Goals
-        </Text>
-        <GlassCard>
-          <GoalRow
-            icon="flame-outline"
-            label="Daily Calories"
-            value={goals.dailyCalories}
-            unit="cal"
-            colors={colors}
-            editing={editingField === "dailyCalories"}
-            editValue={editValue}
-            onEdit={() => startEdit("dailyCalories", goals.dailyCalories)}
-            onSave={() => saveEdit("dailyCalories")}
-            onChangeText={setEditValue}
-            accentColor={colors.tint}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <GoalRow
-            icon="barbell-outline"
-            label="Protein"
-            value={goals.proteinGoal}
-            unit="g"
-            colors={colors}
-            editing={editingField === "proteinGoal"}
-            editValue={editValue}
-            onEdit={() => startEdit("proteinGoal", goals.proteinGoal)}
-            onSave={() => saveEdit("proteinGoal")}
-            onChangeText={setEditValue}
-            accentColor={colors.proteinColor}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <GoalRow
-            icon="pizza-outline"
-            label="Carbs"
-            value={goals.carbsGoal}
-            unit="g"
-            colors={colors}
-            editing={editingField === "carbsGoal"}
-            editValue={editValue}
-            onEdit={() => startEdit("carbsGoal", goals.carbsGoal)}
-            onSave={() => saveEdit("carbsGoal")}
-            onChangeText={setEditValue}
-            accentColor={colors.carbsColor}
-          />
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <GoalRow
-            icon="water-outline"
-            label="Fat"
-            value={goals.fatGoal}
-            unit="g"
-            colors={colors}
-            editing={editingField === "fatGoal"}
-            editValue={editValue}
-            onEdit={() => startEdit("fatGoal", goals.fatGoal)}
-            onSave={() => saveEdit("fatGoal")}
-            onChangeText={setEditValue}
-            accentColor={colors.fatColor}
-          />
-        </GlassCard>
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Weight
-        </Text>
-        <GlassCard>
-          <View style={styles.weightRow}>
-            <View style={styles.weightItem}>
-              <Text
-                style={[styles.weightLabel, { color: colors.textSecondary }]}>
-                Current
-              </Text>
-              {editingField === "currentWeight" ? (
-                <View style={styles.editRow}>
-                  <TextInput
-                    style={[
-                      styles.editInput,
-                      { color: colors.text, borderColor: colors.tint },
-                    ]}
-                    value={editValue}
-                    onChangeText={setEditValue}
-                    keyboardType="numeric"
-                    autoFocus
-                    onSubmitEditing={() => saveEdit("currentWeight")}
-                  />
-                  <Pressable onPress={() => saveEdit("currentWeight")}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={colors.accentEmerald}
-                    />
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() =>
-                    startEdit("currentWeight", goals.currentWeight)
-                  }
-                  style={styles.weightValueRow}>
-                  <Text style={[styles.weightValue, { color: colors.text }]}>
-                    {goals.currentWeight} kg
-                  </Text>
-                  <Feather
-                    name="edit-2"
-                    size={14}
-                    color={colors.textTertiary}
-                  />
-                </Pressable>
-              )}
-            </View>
-            <View
-              style={[styles.weightDivider, { backgroundColor: colors.border }]}
-            />
-            <View style={styles.weightItem}>
-              <Text
-                style={[styles.weightLabel, { color: colors.textSecondary }]}>
-                Target
-              </Text>
-              {editingField === "targetWeight" ? (
-                <View style={styles.editRow}>
-                  <TextInput
-                    style={[
-                      styles.editInput,
-                      { color: colors.text, borderColor: colors.tint },
-                    ]}
-                    value={editValue}
-                    onChangeText={setEditValue}
-                    keyboardType="numeric"
-                    autoFocus
-                    onSubmitEditing={() => saveEdit("targetWeight")}
-                  />
-                  <Pressable onPress={() => saveEdit("targetWeight")}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={colors.accentEmerald}
-                    />
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() => startEdit("targetWeight", goals.targetWeight)}
-                  style={styles.weightValueRow}>
-                  <Text style={[styles.weightValue, { color: colors.text }]}>
-                    {goals.targetWeight} kg
-                  </Text>
-                  <Feather
-                    name="edit-2"
-                    size={14}
-                    color={colors.textTertiary}
-                  />
-                </Pressable>
-              )}
+              <Text style={styles.profileAge}>25 years old</Text>
             </View>
           </View>
-        </GlassCard>
+        </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Diet Preference
-        </Text>
-        <View style={styles.dietGrid}>
-          {DIET_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.key}
-              onPress={() => selectDiet(opt.key)}
-              style={({ pressed }) => [
-                { opacity: pressed ? 0.8 : 1, flex: 1, minWidth: "45%" as any },
-              ]}>
-              <GlassCard
-                style={[
-                  styles.dietCard,
-                  goals.dietPreference === opt.key
-                    ? {
-                        borderColor: colors.tint,
-                        borderWidth: 2,
-                      }
-                    : {},
+        {/* Menu Group 1 */}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.surfaceElevated,
+              paddingVertical: 10,
+              paddingHorizontal: 0,
+            },
+          ]}>
+          {menuGroup1.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <Pressable
+                onPress={item.onPress}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  { opacity: pressed ? 0.7 : 1 },
                 ]}>
                 <Ionicons
-                  name={opt.icon}
+                  name={item.icon as any}
                   size={22}
-                  color={
-                    goals.dietPreference === opt.key
-                      ? colors.tint
-                      : colors.textSecondary
-                  }
+                  color="#1A1A1A"
+                  style={styles.menuIcon}
                 />
-                <Text
-                  style={[
-                    styles.dietLabel,
-                    {
-                      color:
-                        goals.dietPreference === opt.key
-                          ? colors.tint
-                          : colors.text,
-                    },
-                  ]}>
-                  {opt.label}
-                </Text>
-                <Text style={[styles.dietDesc, { color: colors.textTertiary }]}>
-                  {opt.desc}
-                </Text>
-              </GlassCard>
-            </Pressable>
+                <Text style={styles.menuLabel}>{item.title}</Text>
+              </Pressable>
+              {index < menuGroup1.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
           ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          AI Recommendations
-        </Text>
-        {aiRecommendations.map((rec, i) => (
-          <GlassCard key={i} style={styles.recCard}>
-            <View style={styles.recRow}>
-              <View style={[styles.recDot, { backgroundColor: colors.tint }]}>
-                <Ionicons name="sparkles" size={12} color="#fff" />
+        {/* Widgets Header */}
+        <View style={styles.widgetsHeader}>
+          <Text style={styles.widgetsTitle}>Widgets</Text>
+          <Text style={styles.widgetsLink}>How to add?</Text>
+        </View>
+
+        {/* Widgets Row */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.widgetsScrollInfo}>
+          {/* Left Widget: Calorie summary */}
+          <View style={[styles.widgetCard, { backgroundColor: "#fff" }]}>
+            <View style={styles.widgetRingContainer}>
+              <CalorieRing
+                progress={totalCalories / goals.dailyCalories || 0}
+                size={120}
+                strokeWidth={10}
+                color="#1A1A1A"
+                trackColor="#F5F5F5">
+                <View style={styles.ringCenter}>
+                  <Text style={styles.ringValue}>{caloriesLeft}</Text>
+                  <Text style={styles.ringLabel}>Calories left</Text>
+                </View>
+              </CalorieRing>
+            </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.logFoodBtn,
+                { opacity: pressed ? 0.8 : 1 },
+              ]}>
+              <View style={styles.addIconWrap}>
+                <Ionicons name="add" size={18} color="#1A1A1A" />
               </View>
-              <Text style={[styles.recText, { color: colors.text }]}>
-                {rec}
-              </Text>
-            </View>
-          </GlassCard>
-        ))}
+              <Text style={styles.logFoodText}>Log your food</Text>
+            </Pressable>
+          </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Legal</Text>
-        <GlassCard style={{ gap: 0 }}>
-          <Pressable
-            onPress={() => router.push("/privacy-policy")}
-            style={({ pressed }) => [
-              styles.menuItem,
-              { opacity: pressed ? 0.7 : 1 },
+          {/* Right Widget: Macros summary */}
+          <View
+            style={[
+              styles.widgetCard,
+              styles.widgetCardWide,
+              { backgroundColor: "#fff" },
             ]}>
-            <View
-              style={[
-                styles.menuIconBg,
-                { backgroundColor: colors.accentBlue + "15" },
-              ]}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={18}
-                color={colors.accentBlue}
-              />
+            <View style={styles.widgetRowLayout}>
+              <View style={styles.widgetRingContainer}>
+                <CalorieRing
+                  progress={totalCalories / goals.dailyCalories || 0}
+                  size={110}
+                  strokeWidth={10}
+                  color="#1A1A1A"
+                  trackColor="#F5F5F5">
+                  <View style={styles.ringCenter}>
+                    <Text style={styles.ringValueSmall}>{caloriesLeft}</Text>
+                    <Text style={styles.ringLabelSmall}>Calories left</Text>
+                  </View>
+                </CalorieRing>
+              </View>
+              <View style={styles.macrosList}>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      { backgroundColor: colors.proteinColor + "20" },
+                    ]}>
+                    <Ionicons
+                      name="barbell"
+                      size={12}
+                      color={colors.proteinColor}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, goals.proteinGoal - totalProtein)}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Protein</Text>
+                  </View>
+                </View>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      { backgroundColor: colors.carbsColor + "20" },
+                    ]}>
+                    <Ionicons
+                      name="pizza"
+                      size={12}
+                      color={colors.carbsColor}
+                    />
+                  </View>
+                  <View>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, goals.carbsGoal - totalCarbs)}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Carbs</Text>
+                  </View>
+                </View>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      { backgroundColor: colors.fatColor + "20" },
+                    ]}>
+                    <Ionicons name="water" size={12} color={colors.fatColor} />
+                  </View>
+                  <View>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, goals.fatGoal - totalFat)}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Fats</Text>
+                  </View>
+                </View>
+              </View>
             </View>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>
-              Privacy Policy
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={colors.textTertiary}
-            />
-          </Pressable>
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
-          <Pressable
-            onPress={() => router.push("/terms")}
-            style={({ pressed }) => [
-              styles.menuItem,
-              { opacity: pressed ? 0.7 : 1 },
-            ]}>
-            <View
-              style={[
-                styles.menuIconBg,
-                { backgroundColor: colors.accentEmerald + "15" },
-              ]}>
-              <Ionicons
-                name="document-text-outline"
-                size={18}
-                color={colors.accentEmerald}
-              />
-            </View>
-            <Text style={[styles.menuLabel, { color: colors.text }]}>
-              Terms & Conditions
-            </Text>
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={colors.textTertiary}
-            />
-          </Pressable>
-        </GlassCard>
+          </View>
+        </ScrollView>
 
-        {user && (
-          <Pressable
-            onPress={signOut}
-            style={({ pressed }) => [
-              { opacity: pressed ? 0.7 : 1, marginTop: 8 },
-            ]}>
-            <GlassCard style={styles.signOutCard}>
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color={colors.dangerRed}
-              />
-              <Text style={[styles.signOutText, { color: colors.dangerRed }]}>
-                Sign Out
-              </Text>
-            </GlassCard>
-          </Pressable>
-        )}
+        {/* Menu Group 2 */}
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: colors.surfaceElevated,
+              paddingVertical: 10,
+              paddingHorizontal: 0,
+              marginTop: 10,
+            },
+          ]}>
+          {menuGroup2.map((item, index) => (
+            <React.Fragment key={item.id}>
+              <Pressable
+                onPress={item.onPress}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}>
+                <Ionicons
+                  name={item.icon as any}
+                  size={22}
+                  color="#1A1A1A"
+                  style={styles.menuIcon}
+                />
+                <Text style={styles.menuLabel}>{item.title}</Text>
+              </Pressable>
+              {index < menuGroup2.length - 1 && <View style={styles.divider} />}
+            </React.Fragment>
+          ))}
+        </View>
+
+        {/* Logout Button */}
+        <Pressable
+          onPress={handleSignOut}
+          style={({ pressed }) => [
+            styles.card,
+            { backgroundColor: colors.accentRed, marginTop: 20 },
+            { opacity: pressed ? 0.7 : 1 },
+          ]}>
+          <View style={styles.logoutRow}>
+            <Ionicons
+              name="log-out-outline"
+              size={22}
+              color="#1A1A1A"
+              style={styles.logoutIcon}
+            />
+            <Text style={styles.logoutText}>Logout</Text>
+          </View>
+        </Pressable>
+
+        {/* Version */}
+        <Text style={styles.versionText}>VERSION 1.0.0</Text>
       </ScrollView>
     </View>
   );
 }
 
-function GoalRow({
-  icon,
-  label,
-  value,
-  unit,
-  colors,
-  editing,
-  editValue,
-  onEdit,
-  onSave,
-  onChangeText,
-  accentColor,
-}: {
-  icon: string;
-  label: string;
-  value: number;
-  unit: string;
-  colors: ReturnType<typeof useThemeColors>;
-  editing: boolean;
-  editValue: string;
-  onEdit: () => void;
-  onSave: () => void;
-  onChangeText: (text: string) => void;
-  accentColor: string;
-}) {
-  return (
-    <View style={goalStyles.row}>
-      <View
-        style={[goalStyles.iconBg, { backgroundColor: accentColor + "15" }]}>
-        <Ionicons name={icon as any} size={18} color={accentColor} />
-      </View>
-      <Text style={[goalStyles.label, { color: colors.textSecondary }]}>
-        {label}
-      </Text>
-      {editing ? (
-        <View style={goalStyles.editRow}>
-          <TextInput
-            style={[
-              goalStyles.editInput,
-              { color: colors.text, borderColor: colors.tint },
-            ]}
-            value={editValue}
-            onChangeText={onChangeText}
-            keyboardType="numeric"
-            autoFocus
-            onSubmitEditing={onSave}
-          />
-          <Pressable onPress={onSave}>
-            <Ionicons
-              name="checkmark-circle"
-              size={22}
-              color={colors.accentEmerald}
-            />
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable onPress={onEdit} style={goalStyles.valueRow}>
-          <Text style={[goalStyles.value, { color: colors.text }]}>
-            {value}{" "}
-            <Text style={{ color: colors.textTertiary, fontSize: 13 }}>
-              {unit}
-            </Text>
-          </Text>
-          <Feather name="edit-2" size={13} color={colors.textTertiary} />
-        </Pressable>
-      )}
-    </View>
-  );
-}
-
-const goalStyles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 4,
-  },
-  iconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  label: { flex: 1, fontSize: 14, fontFamily: "Poppins_500Medium" },
-  valueRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  value: { fontSize: 16, fontFamily: "Poppins_700Bold" },
-  editRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  editInput: {
-    width: 80,
-    fontSize: 16,
-    fontFamily: "Poppins_600SemiBold",
-    borderBottomWidth: 2,
-    paddingVertical: 2,
-    textAlign: "right",
-  },
-});
-
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, gap: 24 },
-  title: { fontSize: 28, fontFamily: "Poppins_700Bold", marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontFamily: "Poppins_700Bold", marginTop: 8 },
-  profileHeader: { overflow: "hidden" },
-  profileRow: { flexDirection: "row", alignItems: "center", gap: 14 },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarImage: { width: 52, height: 52, borderRadius: 26 },
-  profileInfo: { flex: 1 },
-  profileName: { fontSize: 18, fontFamily: "Poppins_700Bold" },
-  profileSub: { fontSize: 13, fontFamily: "Poppins_400Regular", marginTop: 2 },
-  profileScore: { fontSize: 11, fontFamily: "Poppins_700Bold" },
-  divider: { height: 1, marginVertical: 6 },
-  signInCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    overflow: "hidden",
-  },
-  googleIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signInTitle: { fontSize: 16, fontFamily: "Poppins_700Bold" },
-  signInSub: { fontSize: 12, fontFamily: "Poppins_400Regular", marginTop: 2 },
-  syncBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 10,
-  },
-  syncText: { fontSize: 13, fontFamily: "Poppins_600SemiBold" },
-  weightRow: { flexDirection: "row", alignItems: "center" },
-  weightItem: { flex: 1, alignItems: "center", gap: 4 },
-  weightDivider: { width: 1, height: 40 },
-  weightLabel: { fontSize: 13, fontFamily: "Poppins_400Regular" },
-  weightValueRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  weightValue: { fontSize: 22, fontFamily: "Poppins_700Bold" },
-  editRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  editInput: {
-    width: 60,
-    fontSize: 18,
+  scrollContent: { paddingHorizontal: 20, gap: 16 },
+  mainTitle: {
+    fontSize: 28,
     fontFamily: "Poppins_600SemiBold",
-    borderBottomWidth: 2,
-    paddingVertical: 2,
-    textAlign: "center",
+    marginBottom: 4,
+    color: "#1A1A1A",
   },
-  dietGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  dietCard: { alignItems: "center", gap: 6, paddingVertical: 16 },
-  dietLabel: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
-  dietDesc: {
-    fontSize: 11,
-    fontFamily: "Poppins_400Regular",
-    textAlign: "center",
+  card: {
+    borderRadius: 15,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  recCard: {},
-  recRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  recDot: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+  profileRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 1,
   },
-  recText: {
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  profileInfo: {
     flex: 1,
+  },
+  profileName: {
+    fontSize: 18,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
+  profileAge: {
     fontSize: 14,
     fontFamily: "Poppins_400Regular",
-    lineHeight: 20,
+    color: "#4A4A4A",
+    marginTop: 2,
+  },
+  inviteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 18,
+    paddingBottom: 14,
+  },
+  inviteTitle: {
+    fontSize: 17,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
+  inviteImageBg: {
+    height: 140,
+    marginHorizontal: 12,
+    marginBottom: 12,
+    justifyContent: "flex-end",
+    padding: 16,
+  },
+  inviteImageBorder: {
+    borderRadius: 20,
+  },
+  inviteContent: {
+    gap: 4,
+  },
+  inviteTextBig: {
+    color: "#fff",
+    fontSize: 18,
+    fontFamily: "Poppins_600SemiBold",
+  },
+  referButton: {
+    backgroundColor: "#fff",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+    alignSelf: "flex-start",
+    marginTop: 10,
+  },
+  referButtonText: {
+    color: "#1A1A1A",
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 6,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
   },
-  menuIconBg: {
-    width: 32,
-    height: 32,
+  menuItemActive: {
+    backgroundColor: "#F2F1F4",
+    marginHorizontal: 8,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+  },
+  menuIcon: {
+    marginRight: 14,
+  },
+  menuLabel: {
+    fontSize: 16,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#EDEDED",
+    marginHorizontal: 18,
+  },
+  widgetsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    paddingHorizontal: 4,
+  },
+  widgetsTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1A1A1A",
+  },
+  widgetsLink: {
+    fontSize: 15,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
+  widgetsScrollInfo: {
+    gap: 16,
+    paddingVertical: 4,
+  },
+  widgetCard: {
+    borderRadius: 15,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    width: 200,
+  },
+  widgetCardWide: {
+    width: 260,
+    alignItems: "flex-start",
+  },
+  widgetRingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  ringCenter: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ringValue: {
+    fontSize: 28,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
+  },
+  ringLabel: {
+    fontSize: 11,
+    fontFamily: "Poppins_400Regular",
+    color: "#808080",
+    marginTop: -4,
+  },
+  ringValueSmall: {
+    fontSize: 24,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
+  },
+  ringLabelSmall: {
+    fontSize: 10,
+    fontFamily: "Poppins_400Regular",
+    color: "#808080",
+    marginTop: -2,
+  },
+  logFoodBtn: {
+    backgroundColor: "#1A1A1A",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 100,
+  },
+  addIconWrap: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 6,
+  },
+  logFoodText: {
+    color: "#fff",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
+  },
+  widgetRowLayout: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  macrosList: {
+    marginLeft: 16,
+    justifyContent: "space-between",
+    height: 110,
+  },
+  macroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  macroIconBg: {
+    width: 20,
+    height: 20,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    marginRight: 8,
   },
-  menuLabel: { flex: 1, fontSize: 15, fontFamily: "Poppins_500Medium" },
-  signOutCard: {
+  macroValue: {
+    fontSize: 13,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1A1A1A",
+  },
+  macroLabel: {
+    fontSize: 10,
+    fontFamily: "Poppins_400Regular",
+    color: "#808080",
+    marginTop: -2,
+  },
+  logoutRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
   },
-  signOutText: { fontSize: 15, fontFamily: "Poppins_600SemiBold" },
+  logoutIcon: {
+    marginRight: 14,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
+  versionText: {
+    textAlign: "center",
+    fontSize: 12,
+    fontFamily: "Poppins_400Regular",
+    color: "#808080",
+    marginTop: 10,
+    marginBottom: 30,
+  },
 });

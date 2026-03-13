@@ -13,6 +13,7 @@ const Colors = {
     accentEmerald: "#aad859ff",
     accentOrange: "#F39C12",
     accentPink: "#E84393",
+    accentRed: "#ff7a58ff",
     border: "rgba(0, 0, 0, 0.06)",
     cardShadow: "rgba(0, 0, 0, 0.08)",
     tabIconDefault: "#9CA3AF",

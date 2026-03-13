@@ -2,57 +2,31 @@ import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import {
   getAuth,
   initializeAuth,
-  getReactNativePersistence,
   Auth,
 } from "firebase/auth";
+// @ts-ignore - Firebase SDK v11+ typing issue where react-native exports are not mapped
+import { getReactNativePersistence } from "firebase/auth";
 import { getDatabase, Database } from "firebase/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
-import { getApiUrl } from "./query-client";
+
 
 let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let database: Database | null = null;
-let googleWebClientId: string = "";
-let androidClientId: string = "";
-let iosClientId: string = "";
+
 let initPromise: Promise<void> | null = null;
 
-async function fetchFirebaseConfig() {
-  try {
-    const cached = await AsyncStorage.getItem("firebase_config");
-    if (cached) {
-      return JSON.parse(cached);
-    }
-  } catch {}
-
-  const baseUrl = getApiUrl();
-  const url = new URL("/api/firebase-config", baseUrl);
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("Failed to fetch Firebase config");
-  const config = await res.json();
-
-  try {
-    await AsyncStorage.setItem("firebase_config", JSON.stringify(config));
-  } catch {}
-
-  return config;
-}
-
 async function doInit() {
-  const config = await fetchFirebaseConfig();
-  googleWebClientId = config.googleWebClientId || "";
-  androidClientId = config.androidClientId || "";
-  iosClientId = config.iosClientId || "";
 
   const firebaseConfig = {
-    apiKey: config.apiKey,
-    authDomain: config.authDomain,
-    databaseURL: config.databaseURL,
-    projectId: config.projectId,
-    storageBucket: config.storageBucket,
-    messagingSenderId: config.messagingSenderId,
-    appId: config.appId,
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    databaseURL: process.env.EXPO_PUBLIC_FIREBASE_DATABASE_URL,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
   };
 
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -90,15 +64,15 @@ export function getFirebaseDatabase(): Database {
 }
 
 export function getGoogleWebClientId(): string {
-  return googleWebClientId;
+  return process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "";
 }
 
 export function getGoogleAndroidClientId(): string {
-  return androidClientId;
+  return process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "";
 }
 
 export function getGoogleIosClientId(): string {
-  return iosClientId;
+  return process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
 }
 
 export { app, auth, database };

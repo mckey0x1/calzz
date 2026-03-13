@@ -18,12 +18,12 @@ const SECTIONS = [
   {
     title: "Acceptance of Terms",
     content:
-      "By downloading, installing, or using NutriAI, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the application.",
+      "By downloading, installing, or using Calzz, you agree to be bound by these Terms and Conditions. If you do not agree to these terms, please do not use the application.",
   },
   {
     title: "Description of Service",
     content:
-      "NutriAI is a calorie tracking and fitness assistant application that provides nutrition logging, AI-powered food analysis, progress tracking, and personalized health insights. The app is designed for informational purposes and is not a substitute for professional medical or nutritional advice.",
+      "Calzz is a calorie tracking and fitness assistant application that provides nutrition logging, AI-powered food analysis, progress tracking, and personalized health insights. The app is designed for informational purposes and is not a substitute for professional medical or nutritional advice.",
   },
   {
     title: "User Accounts",
@@ -38,12 +38,12 @@ const SECTIONS = [
   {
     title: "Health Disclaimer",
     content:
-      "NutriAI provides general nutrition and fitness information only. It is NOT a medical device and should NOT be used as a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider before starting any diet, exercise, or wellness program. The AI insights are algorithmic estimates and may not be accurate for your specific health needs.",
+      "Calzz provides general nutrition and fitness information only. It is NOT a medical device and should NOT be used as a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider before starting any diet, exercise, or wellness program. The AI insights are algorithmic estimates and may not be accurate for your specific health needs.",
   },
   {
     title: "Intellectual Property",
     content:
-      "All content, features, and functionality of NutriAI, including but not limited to text, graphics, logos, icons, and software, are the exclusive property of NutriAI and are protected by international copyright, trademark, and other intellectual property laws.",
+      "All content, features, and functionality of Calzz, including but not limited to text, graphics, logos, icons, and software, are the exclusive property of Calzz and are protected by international copyright, trademark, and other intellectual property laws.",
   },
   {
     title: "Data Accuracy",
@@ -53,7 +53,7 @@ const SECTIONS = [
   {
     title: "Limitation of Liability",
     content:
-      "NutriAI shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service, including but not limited to health outcomes, data loss, or service interruptions.",
+      "Calzz shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service, including but not limited to health outcomes, data loss, or service interruptions.",
   },
   {
     title: "Modifications to Service",

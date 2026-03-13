@@ -13,8 +13,9 @@ import {
   signOut as firebaseSignOut,
   GoogleAuthProvider,
   User,
+  signInWithPopup,
 } from "firebase/auth";
-import * as Google from "expo-auth-session/providers/google";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
 import { ref, set, get, update } from "firebase/database";
 import {
@@ -45,6 +46,7 @@ interface AuthContextValue {
   firebaseReady: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -55,21 +57,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [firebaseReady, setFirebaseReady] = useState(false);
-  const [clientId, setClientId] = useState<string | undefined>("placeholder");
+  const [clientId, setClientId] = useState<string | undefined>(
+    getGoogleWebClientId() || undefined,
+  );
   const [androidClientId, setAndroidClientId] = useState<string | undefined>(
-    "placeholder",
+    getGoogleAndroidClientId() || undefined,
   );
   const [iosClientId, setIosClientId] = useState<string | undefined>(
-    "placeholder",
+    getGoogleIosClientId() || undefined,
   );
 
   useEffect(() => {
     initFirebase()
       .then(() => {
         setFirebaseReady(true);
-        setClientId(getGoogleWebClientId() || "placeholder");
-        setAndroidClientId(getGoogleAndroidClientId() || "placeholder");
-        setIosClientId(getGoogleIosClientId() || "placeholder");
+        setClientId(getGoogleWebClientId() || undefined);
+        setAndroidClientId(getGoogleAndroidClientId() || undefined);
+        setIosClientId(getGoogleIosClientId() || undefined);
 
         const authInstance = getFirebaseAuth();
         const unsubscribe = onAuthStateChanged(
@@ -92,26 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: clientId,
-    androidClientId: androidClientId,
-    iosClientId: iosClientId,
-  });
-
   useEffect(() => {
-    if (response?.type === "success" && response.authentication?.idToken) {
-      const credential = GoogleAuthProvider.credential(
-        response.authentication.idToken,
-      );
-      const authInstance = getFirebaseAuth();
-      signInWithCredential(authInstance, credential).catch((error) => {
-        console.error("Firebase sign in error:", error);
-        setIsSigningIn(false);
+    if (clientId) {
+      GoogleSignin.configure({
+        webClientId: clientId,
+        iosClientId: iosClientId,
+        // @ts-ignore
+        offlineAccess: true,
       });
-    } else if (response?.type === "error" || response?.type === "dismiss") {
-      setIsSigningIn(false);
     }
-  }, [response]);
+  }, [clientId, iosClientId]);
 
   async function loadOrCreateProfile(firebaseUser: User) {
     try {
@@ -150,13 +144,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signInWithGoogle() {
-    if (!firebaseReady || !clientId) {
+    if (!firebaseReady) {
       console.error("Firebase not ready yet");
       return;
     }
     try {
       setIsSigningIn(true);
-      await promptAsync();
+      if (Platform.OS === "web") {
+        const authInstance = getFirebaseAuth();
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(authInstance, provider);
+      } else {
+        if (!clientId) {
+          console.error("Client ID not ready");
+          setIsSigningIn(false);
+          return;
+        }
+        await GoogleSignin.hasPlayServices({
+          showPlayServicesUpdateDialog: true,
+        });
+        const signInResult = await GoogleSignin.signIn();
+
+        // Handle idToken correctly based on the return type of GoogleSignin.signIn()
+        let idToken: string | null = null;
+
+        if (signInResult && "type" in signInResult) {
+          if (signInResult.type === "success") {
+            idToken = signInResult.data?.idToken ?? null;
+          } else {
+            // E.g., CancelledResponse
+            setIsSigningIn(false);
+            return;
+          }
+        } else if (signInResult && "data" in signInResult) {
+          idToken = (signInResult as any).data?.idToken ?? null;
+        } else if (signInResult && "idToken" in signInResult) {
+          // older version fallback
+          idToken = (signInResult as any).idToken;
+        }
+
+        if (idToken) {
+          const credential = GoogleAuthProvider.credential(idToken);
+          const authInstance = getFirebaseAuth();
+          await signInWithCredential(authInstance, credential);
+        } else {
+          console.error("No ID token returned from Google Sign In");
+          setIsSigningIn(false);
+        }
+      }
     } catch (error) {
       console.error("Google sign in error:", error);
       setIsSigningIn(false);
@@ -174,6 +209,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function deleteAccount() {
+    if (!user) return;
+    try {
+      const db = getFirebaseDatabase();
+      const userRef = ref(db, `users/${user.uid}`);
+      await update(userRef, { status: "deleted" });
+
+      const authInstance = getFirebaseAuth();
+      if (authInstance.currentUser) {
+        await authInstance.currentUser.delete();
+      }
+      setUser(null);
+      setUserProfile(null);
+    } catch (error) {
+      console.error("Delete account error:", error);
+      throw error;
+    }
+  }
+
   const value = useMemo(
     () => ({
       user,
@@ -183,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       firebaseReady,
       signInWithGoogle,
       signOut,
+      deleteAccount,
     }),
     [user, userProfile, isLoading, isSigningIn, firebaseReady],
   );
