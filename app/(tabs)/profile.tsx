@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,69 +10,133 @@ import {
   useColorScheme,
   Platform,
   Alert,
+  Modal,
+  Linking,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  FontAwesome5,
+  Ionicons,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import { CommonActions, useNavigation } from "@react-navigation/native";
 
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
 import { useAuth } from "@/lib/auth-context";
 import { CalorieRing } from "@/components/CalorieRing";
+import * as Device from "expo-device";
+import * as Application from "expo-application";
+import Constants from "expo-constants";
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
 
   const { goals, totalCalories, totalProtein, totalCarbs, totalFat } =
     useNutrition();
   const { user, signOut, deleteAccount } = useAuth();
 
-  const handleSignOut = async () => {
-    if (Platform.OS !== "web")
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await signOut();
-  };
-
-  const handleDeleteAccount = async () => {
+  const [modalType, setModalType] = useState<"logout" | "delete" | null>(null);
+  function handleSignOut() {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+    setModalType("logout");
+  }
 
-    Alert.alert(
-      "Delete Account?",
-      "Are you sure you want to completely delete your account? This will erase all your data.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteAccount();
-              router.replace("/");
-            } catch (err) {
-              console.error(err);
-              Alert.alert(
-                "Error",
-                "Could not delete your account. Try signing in again first.",
-              );
-            }
-          },
-        },
-      ],
-    );
+  function handleDeleteAccount() {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+    setModalType("delete");
+  }
+
+  const navigateToOnboarding = () => {
+    // getParent() gets the root Stack navigator (above the Tabs navigator)
+    const rootNav = navigation.getParent();
+    if (rootNav) {
+      rootNav.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "index" }],
+        }),
+      );
+    } else {
+      // Fallback
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: "index" }],
+        }),
+      );
+    }
   };
+
+  const confirmLogout = async () => {
+    setModalType(null);
+    await signOut();
+    navigateToOnboarding();
+  };
+
+  const confirmDelete = async () => {
+    setModalType(null);
+    try {
+      await deleteAccount();
+      navigateToOnboarding();
+    } catch (err) {
+      console.error(err);
+      Alert.alert(
+        "Error",
+        "Could not delete your account. Try signing in again first.",
+      );
+    }
+  };
+
+  function handleSupportEmail() {
+    const userId = user?.uid || "N/A";
+    const email = user?.email || "N/A";
+    const appVersion =
+      Application.nativeApplicationVersion ||
+      Constants.expoConfig?.version ||
+      "1.0.0";
+    const buildVersion = Application.nativeBuildVersion || "N/A";
+    const providerId = user?.providerData?.[0]?.providerId || "N/A";
+    const platformName =
+      Platform.OS === "ios"
+        ? "iOS"
+        : Platform.OS === "android"
+          ? "Android"
+          : "Web";
+    const osVersion = Platform.Version?.toString() || "N/A";
+    const deviceName = Device.modelName || Device.deviceName || "Unknown";
+    const brand = Device.brand || "";
+
+    const body = `\n\n\n.......\nPlease describe your issue above this line.\n\nUser ID:\n${userId}\nEmail:\n${email}\nVersion: ${appVersion}.${buildVersion}\nProvider Id:\n${providerId}\n\nPlatform: ${platformName}\n${platformName} Version: ${osVersion}\nDevice: ${brand} ${deviceName}`;
+
+    const subject = encodeURIComponent("Support Request");
+    const encodedBody = encodeURIComponent(body);
+    const mailtoUrl = `mailto:dormsdots@gmail.com?subject=${subject}&body=${encodedBody}`;
+
+    Linking.openURL(mailtoUrl).catch(() => {
+      Alert.alert(
+        "Error",
+        "Could not open email client. Please send an email to dormsdots@gmail.com",
+      );
+    });
+  }
 
   const menuGroup1 = [
     {
       id: "personal",
       title: "Personal details",
       icon: "id-card-outline",
-      onPress: () => {},
+      onPress: () => router.push("/personal-details" as any),
     },
     {
       id: "macros",
@@ -105,13 +169,13 @@ export default function ProfileScreen() {
       id: "support",
       title: "Support Email",
       icon: "mail-outline",
-      onPress: () => {},
+      onPress: handleSupportEmail,
     },
     {
       id: "feature",
       title: "Feature Request",
       icon: "megaphone-outline",
-      onPress: () => {},
+      onPress: () => router.push("/feature-requests" as any),
     },
     {
       id: "delete",
@@ -162,7 +226,7 @@ export default function ProfileScreen() {
             )}
             <View style={styles.profileInfo}>
               <Text style={styles.profileName}>
-                {user?.displayName || "munna"}
+                {user?.displayName || "user"}
               </Text>
               <Text style={styles.profileAge}>25 years old</Text>
             </View>
@@ -203,7 +267,7 @@ export default function ProfileScreen() {
         {/* Widgets Header */}
         <View style={styles.widgetsHeader}>
           <Text style={styles.widgetsTitle}>Widgets</Text>
-          <Text style={styles.widgetsLink}>How to add?</Text>
+          {/* <Text style={styles.widgetsLink}>How to add?</Text> */}
         </View>
 
         {/* Widgets Row */}
@@ -216,7 +280,7 @@ export default function ProfileScreen() {
             <View style={styles.widgetRingContainer}>
               <CalorieRing
                 progress={totalCalories / goals.dailyCalories || 0}
-                size={120}
+                size={100}
                 strokeWidth={10}
                 color="#1A1A1A"
                 trackColor="#F5F5F5">
@@ -232,7 +296,7 @@ export default function ProfileScreen() {
                 { opacity: pressed ? 0.8 : 1 },
               ]}>
               <View style={styles.addIconWrap}>
-                <Ionicons name="add" size={18} color="#1A1A1A" />
+                <Ionicons name="add" size={12} color="#1A1A1A" />
               </View>
               <Text style={styles.logFoodText}>Log your food</Text>
             </Pressable>
@@ -246,7 +310,12 @@ export default function ProfileScreen() {
               { backgroundColor: "#fff" },
             ]}>
             <View style={styles.widgetRowLayout}>
-              <View style={styles.widgetRingContainer}>
+              {/* Left Column: Calorie Ring */}
+              <View
+                style={[
+                  styles.widgetRingContainer2,
+                  { alignSelf: "center", justifyContent: "center" },
+                ]}>
                 <CalorieRing
                   progress={totalCalories / goals.dailyCalories || 0}
                   size={110}
@@ -259,60 +328,103 @@ export default function ProfileScreen() {
                   </View>
                 </CalorieRing>
               </View>
+
+              {/* Middle Column: Macros */}
               <View style={styles.macrosList}>
                 <View style={styles.macroRow}>
                   <View
                     style={[
                       styles.macroIconBg,
-                      { backgroundColor: colors.proteinColor + "20" },
+                      {
+                        backgroundColor: colors.proteinColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
                     ]}>
-                    <Ionicons
-                      name="barbell"
+                    <FontAwesome5
+                      name="drumstick-bite"
                       size={12}
-                      color={colors.proteinColor}
+                      color="#e65c5c"
                     />
                   </View>
-                  <View>
+                  <View style={{ marginLeft: 8 }}>
                     <Text style={styles.macroValue}>
                       {Math.max(0, goals.proteinGoal - totalProtein)}g
                     </Text>
-                    <Text style={styles.macroLabel}>Protein</Text>
+                    <Text style={styles.macroLabel}>Protein left</Text>
                   </View>
                 </View>
                 <View style={styles.macroRow}>
                   <View
                     style={[
                       styles.macroIconBg,
-                      { backgroundColor: colors.carbsColor + "20" },
+                      {
+                        backgroundColor: colors.carbsColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
                     ]}>
-                    <Ionicons
-                      name="pizza"
-                      size={12}
-                      color={colors.carbsColor}
+                    <MaterialCommunityIcons
+                      name="barley"
+                      size={16}
+                      color="#e89e5d"
                     />
                   </View>
-                  <View>
+                  <View style={{ marginLeft: 8 }}>
                     <Text style={styles.macroValue}>
                       {Math.max(0, goals.carbsGoal - totalCarbs)}g
                     </Text>
-                    <Text style={styles.macroLabel}>Carbs</Text>
+                    <Text style={styles.macroLabel}>Carbs left</Text>
                   </View>
                 </View>
                 <View style={styles.macroRow}>
                   <View
                     style={[
                       styles.macroIconBg,
-                      { backgroundColor: colors.fatColor + "20" },
+                      {
+                        backgroundColor: colors.fatColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
                     ]}>
-                    <Ionicons name="water" size={12} color={colors.fatColor} />
+                    <MaterialCommunityIcons
+                      name="peanut"
+                      size={16}
+                      color="#5a8bed"
+                    />
                   </View>
-                  <View>
+                  <View style={{ marginLeft: 8 }}>
                     <Text style={styles.macroValue}>
                       {Math.max(0, goals.fatGoal - totalFat)}g
                     </Text>
-                    <Text style={styles.macroLabel}>Fats</Text>
+                    <Text style={styles.macroLabel}>Fats left</Text>
                   </View>
                 </View>
+              </View>
+
+              {/* Right Column: Scan Actions */}
+              <View style={styles.actionBtnsCol}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => router.push("/scanner")}>
+                  <Ionicons name="scan-circle" size={24} color="#1A1A1A" />
+                  <Text style={styles.actionBtnText}>Scan Food</Text>
+                </Pressable>
+                {/* <Pressable
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => router.push("/scanner")}>
+                  <Ionicons name="barcode-outline" size={18} color="#1A1A1A" />
+                  <Text style={styles.actionBtnText}>Barcode</Text>
+                </Pressable> */}
               </View>
             </View>
           </View>
@@ -372,6 +484,75 @@ export default function ProfileScreen() {
         {/* Version */}
         <Text style={styles.versionText}>VERSION 1.0.0</Text>
       </ScrollView>
+
+      {/* Custom Modal for Logout and Delete */}
+      <Modal
+        visible={modalType !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalType(null)}>
+        <View style={styles.modalOverlay}>
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setModalType(null)}
+          />
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons
+                name={
+                  modalType === "logout" ? "log-out-outline" : "trash-outline"
+                }
+                size={34}
+                color={modalType === "logout" ? colors.tint : colors.accentRed}
+              />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {modalType === "logout" ? "Log out" : "Delete Account?"}
+            </Text>
+            <Text
+              style={[styles.modalMessage, { color: colors.textSecondary }]}>
+              {modalType === "logout"
+                ? "Are you sure you want to log out?"
+                : "Are you sure you want to completely delete your account? This will erase all your data."}
+            </Text>
+            <View style={styles.modalActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalButtonBase,
+                  styles.modalButtonCancel,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}
+                onPress={() => setModalType(null)}>
+                <Text
+                  style={[
+                    styles.modalButtonText,
+                    { color: colors.textSecondary },
+                  ]}>
+                  Cancel
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.modalButtonBase,
+                  {
+                    backgroundColor:
+                      modalType === "logout" ? colors.tint : colors.accentRed,
+                    opacity: pressed ? 0.7 : 1,
+                  },
+                ]}
+                onPress={
+                  modalType === "logout" ? confirmLogout : confirmDelete
+                }>
+                <Text style={[styles.modalButtonText, { color: "#fff" }]}>
+                  {modalType === "logout" ? "Logout" : "Delete"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -511,22 +692,22 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
   },
   widgetsScrollInfo: {
-    gap: 16,
+    gap: 10,
     paddingVertical: 4,
+    paddingHorizontal: 10,
   },
   widgetCard: {
     borderRadius: 15,
-    padding: 24,
+    padding: 8,
     alignItems: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-    width: 200,
   },
   widgetCardWide: {
-    width: 260,
+    width: 340,
     alignItems: "flex-start",
   },
   widgetRingContainer: {
@@ -534,28 +715,32 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
   },
+  widgetRingContainer2: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   ringCenter: {
     alignItems: "center",
     justifyContent: "center",
   },
   ringValue: {
-    fontSize: 28,
-    fontFamily: "Poppins_700Bold",
+    fontSize: 20,
+    fontFamily: "Poppins_600SemiBold",
     color: "#1A1A1A",
   },
   ringLabel: {
-    fontSize: 11,
+    fontSize: 6,
     fontFamily: "Poppins_400Regular",
     color: "#808080",
     marginTop: -4,
   },
   ringValueSmall: {
     fontSize: 24,
-    fontFamily: "Poppins_700Bold",
+    fontFamily: "Poppins_600SemiBold",
     color: "#1A1A1A",
   },
   ringLabelSmall: {
-    fontSize: 10,
+    fontSize: 7,
     fontFamily: "Poppins_400Regular",
     color: "#808080",
     marginTop: -2,
@@ -564,15 +749,16 @@ const styles = StyleSheet.create({
     backgroundColor: "#1A1A1A",
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 5,
+    fontSize: 12,
     paddingHorizontal: 16,
     borderRadius: 100,
   },
   addIconWrap: {
     backgroundColor: "#fff",
     borderRadius: 10,
-    width: 20,
-    height: 20,
+    width: 15,
+    height: 15,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,
@@ -580,17 +766,19 @@ const styles = StyleSheet.create({
   logFoodText: {
     color: "#fff",
     fontFamily: "Poppins_600SemiBold",
-    fontSize: 14,
+    fontSize: 12,
   },
   widgetRowLayout: {
     flexDirection: "row",
     alignItems: "center",
     width: "100%",
+    height: "100%",
+    justifyContent: "center",
   },
   macrosList: {
-    marginLeft: 16,
+    marginLeft: 12,
     justifyContent: "space-between",
-    height: 110,
+    flex: 1,
   },
   macroRow: {
     flexDirection: "row",
@@ -615,10 +803,29 @@ const styles = StyleSheet.create({
     color: "#808080",
     marginTop: -2,
   },
+  actionBtnsCol: {
+    justifyContent: "space-between",
+    backgroundColor: "#F5F5F5",
+    borderRadius: 15,
+  },
+  actionBtn: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 2,
+    height: "100%",
+  },
+  actionBtnText: {
+    fontSize: 9,
+    fontFamily: "Poppins_500Medium",
+    color: "#1A1A1A",
+  },
   logoutRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 4,
     paddingHorizontal: 10,
   },
   logoutIcon: {
@@ -636,5 +843,66 @@ const styles = StyleSheet.create({
     color: "#808080",
     marginTop: 10,
     marginBottom: 30,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContent: {
+    width: "85%",
+    borderRadius: 20,
+    padding: 24,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "#F4F4F6",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: "Poppins_600SemiBold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalMessage: {
+    fontSize: 14,
+    fontFamily: "Poppins_400Regular",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  modalButtonBase: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalButtonCancel: {
+    backgroundColor: "#F4F4F6",
+  },
+  modalButtonText: {
+    fontSize: 15,
+    fontFamily: "Poppins_600SemiBold",
   },
 });

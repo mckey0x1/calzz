@@ -19,34 +19,6 @@ import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>Dashboard</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="food-log">
-        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
-        <Label>Log</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="analytics">
-        <Icon
-          sf={{
-            default: "chart.line.uptrend.xyaxis",
-            selected: "chart.line.uptrend.xyaxis",
-          }}
-        />
-        <Label>Progress</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
-
 function ClassicTabLayout() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
@@ -66,7 +38,7 @@ function ClassicTabLayout() {
       <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="food-log" options={{ title: "Log" }} />
       <Tabs.Screen name="analytics" options={{ title: "Progress" }} />
-      <Tabs.Screen name="profile" options={{ href: null, title: "Profile" }} />
+      <Tabs.Screen name="profile" options={{ title: "Profile" }} />
     </Tabs>
   );
 }

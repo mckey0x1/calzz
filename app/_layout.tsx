@@ -46,6 +46,10 @@ function RootLayoutNav() {
           name="terms"
           options={{ headerShown: false, presentation: "modal" }}
         />
+        <Stack.Screen
+          name="feature-requests"
+          options={{ headerShown: false }}
+        />
       </Stack>
     </>
   );

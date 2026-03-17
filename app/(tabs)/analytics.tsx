@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,481 +6,492 @@ import {
   ScrollView,
   useColorScheme,
   Platform,
+  Pressable,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
-import Svg, { Polyline, Circle, Line, Rect } from "react-native-svg";
+import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, G, Text as SvgText, Rect, Line } from "react-native-svg";
 import { useThemeColors } from "@/constants/colors";
-import { useNutrition } from "@/lib/nutrition-context";
-import { GlassCard } from "@/components/GlassCard";
-import { CalorieRing } from "@/components/CalorieRing";
 
 export default function AnalyticsScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  const {
-    weekLogs,
-    todayLog,
-    totalCalories,
-    totalProtein,
-    totalCarbs,
-    totalFat,
-    goals,
-  } = useNutrition();
-
-  const allLogs = useMemo(() => [...weekLogs, todayLog], [weekLogs, todayLog]);
-
-  const weeklyCalories = useMemo(() => {
-    return allLogs.map((log) => ({
-      date: log.date,
-      total: log.entries.reduce((sum, e) => sum + e.calories, 0),
-    }));
-  }, [allLogs]);
-
-  const avgCalories = useMemo(() => {
-    const total = weeklyCalories.reduce((sum, d) => sum + d.total, 0);
-    return Math.round(total / weeklyCalories.length);
-  }, [weeklyCalories]);
-
-  const weights = useMemo(() => {
-    return allLogs
-      .filter((l) => l.weight)
-      .map((l) => ({ date: l.date, weight: l.weight! }));
-  }, [allLogs]);
-
-  const healthScore = useMemo(() => {
-    let score = 50;
-    const calPercent = totalCalories / goals.dailyCalories;
-    if (calPercent > 0.7 && calPercent < 1.1) score += 15;
-    else if (calPercent > 0.5) score += 8;
-
-    const proteinPercent = totalProtein / goals.proteinGoal;
-    if (proteinPercent > 0.7) score += 15;
-    else if (proteinPercent > 0.4) score += 8;
-
-    if (todayLog.waterGlasses >= goals.waterGoal * 0.7) score += 10;
-    if (todayLog.steps >= goals.stepsGoal * 0.7) score += 10;
-
-    return Math.min(score, 100);
-  }, [totalCalories, totalProtein, todayLog, goals]);
-
-  const totalMacroGrams = totalProtein + totalCarbs + totalFat;
-  const proteinPct =
-    totalMacroGrams > 0
-      ? Math.round((totalProtein / totalMacroGrams) * 100)
-      : 0;
-  const carbsPct =
-    totalMacroGrams > 0 ? Math.round((totalCarbs / totalMacroGrams) * 100) : 0;
-  const fatPct =
-    totalMacroGrams > 0 ? Math.round((totalFat / totalMacroGrams) * 100) : 0;
-
+  
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#dfffa2ff", "#f3f4d4ff"]}
+        colors={["#fcfdfd", "#fcfdfd"]}
         style={StyleSheet.absoluteFill}
       />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 40,
-            paddingBottom: Platform.OS === "web" ? 34 + 84 : 100,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 20,
+            paddingBottom: Platform.OS === "web" ? 34 + 84 : 150,
           },
         ]}
         showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: colors.text }]}>Progress</Text>
+        <Text style={styles.title}>Progress</Text>
 
-        <GlassCard style={styles.healthScoreCard}>
-          <LinearGradient
-            colors={[
-              colorScheme === "dark"
-                ? "rgba(0,217,165,0.12)"
-                : "rgba(0,184,148,0.06)",
-              colorScheme === "dark"
-                ? "rgba(139,124,247,0.12)"
-                : "rgba(108,92,231,0.06)",
-            ]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={styles.healthScoreContent}>
-            <CalorieRing
-              progress={healthScore / 100}
-              size={100}
-              strokeWidth={8}
-              color={colors.accentEmerald}
-              trackColor={colors.progressRingBg}>
-              <Text style={[styles.healthScoreValue, { color: colors.text }]}>
-                {healthScore}
-              </Text>
-            </CalorieRing>
-            <View style={styles.healthScoreInfo}>
-              <View style={styles.healthScoreHeader}>
-                <Ionicons
-                  name="sparkles"
-                  size={16}
-                  color={colors.accentEmerald}
-                />
-                <Text
-                  style={[
-                    styles.healthScoreLabel,
-                    { color: colors.accentEmerald },
-                  ]}>
-                  AI Health Score
-                </Text>
+        {/* Top Cards Row */}
+        <View style={styles.topCardsRow}>
+          {/* Weight Card */}
+          <View style={styles.weightCardWrapper}>
+            <View style={styles.weightCardContent}>
+              <Text style={styles.cardHeaderSmall}>Your Weight</Text>
+              <Text style={styles.weightValueMain}>132.1 <Text style={styles.weightUnit}>lbs</Text></Text>
+              
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: "15%" }]} />
               </View>
-              <Text
-                style={[
-                  styles.healthScoreDesc,
-                  { color: colors.textSecondary },
-                ]}>
-                {healthScore >= 80
-                  ? "Excellent! You're making great choices today."
-                  : healthScore >= 60
-                    ? "Good progress. Focus on hitting your protein and water targets."
-                    : "Room to improve. Log more meals and stay hydrated."}
-              </Text>
+              <Text style={styles.goalText}>Goal <Text style={styles.goalTextBold}>140 lbs</Text></Text>
+            </View>
+            <Pressable style={styles.logWeightBtn}>
+              <Text style={styles.logWeightBtnText}>Log Weight</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFF" />
+            </Pressable>
+          </View>
+
+          {/* Streak Card */}
+          <View style={styles.streakCard}>
+            <View style={styles.flameContainer}>
+              <Ionicons name="flame" size={50} color="#FF9F1C" style={styles.flameIcon} />
+              <Ionicons name="sparkles" size={14} color="#F3E5AB" style={styles.sparkle1} />
+              <Ionicons name="sparkles" size={12} color="#F3E5AB" style={styles.sparkle2} />
+              
+              <View style={styles.streakNumberContainer}>
+                <Text style={styles.streakNumber}>21</Text>
+              </View>
+            </View>
+            <View style={styles.streakTextContainer}>
+              <Text style={styles.streakLabel}>Day Streak</Text>
+            </View>
+            
+            <View style={styles.weekRow}>
+              {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => {
+                const isChecked = i < 2; 
+                return (
+                  <View key={i} style={styles.dayCol}>
+                    <Text style={[styles.dayText, isChecked && styles.dayTextActive]}>{day}</Text>
+                    {isChecked ? (
+                      <View style={styles.checkedCircle}>
+                        <Ionicons name="checkmark" size={10} color="#FFF" />
+                      </View>
+                    ) : (
+                      <View style={styles.uncheckedCircle} />
+                    )}
+                  </View>
+                );
+              })}
             </View>
           </View>
-        </GlassCard>
+        </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Weekly Calories
-        </Text>
-        <GlassCard>
+        {/* Weight Progress Chart Card */}
+        <View style={styles.chartCard}>
           <View style={styles.chartHeader}>
-            <Text style={[styles.chartAvg, { color: colors.textSecondary }]}>
-              Avg:{" "}
-              <Text
-                style={{ color: colors.text, fontFamily: "Poppins_700Bold" }}>
-                {avgCalories} cal
-              </Text>
-            </Text>
-            <View
-              style={[
-                styles.goalLine,
-                { backgroundColor: colors.accentEmerald + "30" },
-              ]}>
-              <Text
-                style={[styles.goalLineText, { color: colors.accentEmerald }]}>
-                Goal: {goals.dailyCalories}
-              </Text>
+            <Text style={styles.chartTitle}>Weight Progress</Text>
+            <View style={styles.flagPill}>
+              <Ionicons name="flag-outline" size={12} color="#444" />
+              <Text style={styles.flagText}>80% <Text style={styles.flagSubText}>of goal</Text></Text>
             </View>
           </View>
-          <WeeklyBarChart
-            data={weeklyCalories}
-            goal={goals.dailyCalories}
-            colors={colors}
-          />
-        </GlassCard>
 
-        {weights.length > 1 && (
-          <>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Weight Trend
-            </Text>
-            <GlassCard>
-              <WeightLineChart data={weights} colors={colors} />
-            </GlassCard>
-          </>
-        )}
-
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Macro Balance
-        </Text>
-        <GlassCard>
-          <View style={styles.macroBalanceRow}>
-            <MacroPieSlice
-              label="Protein"
-              value={proteinPct}
-              color={colors.proteinColor}
-              colors={colors}
-            />
-            <MacroPieSlice
-              label="Carbs"
-              value={carbsPct}
-              color={colors.carbsColor}
-              colors={colors}
-            />
-            <MacroPieSlice
-              label="Fat"
-              value={fatPct}
-              color={colors.fatColor}
-              colors={colors}
-            />
+          <View style={styles.chartArea}>
+            <ChartSvg />
           </View>
-          <View
-            style={[
-              styles.macroBalanceBar,
-              { backgroundColor: colors.progressRingBg },
-            ]}>
-            {totalMacroGrams > 0 && (
-              <>
-                <View
-                  style={[
-                    styles.macroSegment,
-                    { backgroundColor: colors.proteinColor, flex: proteinPct },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.macroSegment,
-                    { backgroundColor: colors.carbsColor, flex: carbsPct },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.macroSegment,
-                    { backgroundColor: colors.fatColor, flex: fatPct },
-                  ]}
-                />
-              </>
-            )}
-          </View>
-        </GlassCard>
 
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Weekly Summary
-        </Text>
-        <View style={styles.summaryRow}>
-          <GlassCard style={styles.summaryCard}>
-            <Feather name="target" size={20} color={colors.tint} />
-            <Text style={[styles.summaryValue, { color: colors.text }]}>
-              {
-                weeklyCalories.filter(
-                  (d) =>
-                    Math.abs(d.total - goals.dailyCalories) <
-                    goals.dailyCalories * 0.15,
-                ).length
-              }
-              /7
+          {/* Time Selector */}
+          <View style={styles.timeSelector}>
+            <View style={styles.timeOptionBox}>
+              <Text style={styles.timeOption}>90D</Text>
+            </View>
+            <View style={styles.timeOptionActive}>
+              <Text style={styles.timeTextActive}>6M</Text>
+            </View>
+            <View style={styles.timeOptionBox}>
+              <Text style={styles.timeOption}>1Y</Text>
+            </View>
+            <View style={styles.timeOptionBox}>
+              <Text style={styles.timeOption}>ALL</Text>
+            </View>
+          </View>
+
+          {/* Motivational Pill */}
+          <View style={styles.motivationalPill}>
+            <Text style={styles.motivationalText}>
+              Great job! Consistency is key, and you're mastering it!
             </Text>
-            <Text
-              style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Days on target
-            </Text>
-          </GlassCard>
-          <GlassCard style={styles.summaryCard}>
-            <Feather
-              name="trending-up"
-              size={20}
-              color={colors.accentEmerald}
-            />
-            <Text style={[styles.summaryValue, { color: colors.text }]}>
-              {Math.round(
-                (weeklyCalories.reduce((s, d) => s + d.total, 0) / 1000) * 10,
-              ) / 10}
-              k
-            </Text>
-            <Text
-              style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-              Total cal this week
-            </Text>
-          </GlassCard>
+          </View>
+        </View>
+
+        {/* Daily Average Calories Card */}
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>Daily Average Calories</Text>
+          <View style={styles.calorieRow}>
+            <Text style={styles.calorieValue}>2861 <Text style={styles.calorieUnit}>cal</Text></Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="arrow-up" size={14} color="#38b000" />
+              <Text style={styles.calTrendText}>90%</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
     </View>
   );
 }
 
-function WeeklyBarChart({
-  data,
-  goal,
-  colors,
-}: {
-  data: { date: string; total: number }[];
-  goal: number;
-  colors: ReturnType<typeof useThemeColors>;
-}) {
-  const maxVal = Math.max(...data.map((d) => d.total), goal) * 1.1;
-  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+function ChartSvg() {
+  const chartW = 300;
+  
+  // Adjusted path curves to roughly match the screenshot.
+  // We use an SVG viewBox of 0 0 300 200
+  // Line goes from left to right.
+  const greenLineD = "M 5 140 Q 15 125, 20 120 T 35 130 T 45 140 T 70 80 Q 90 105, 100 120 T 140 100 T 155 105 T 170 65";
+  const blackLineD = "M 170 65 Q 185 85, 190 100 T 220 70 T 280 60";
 
+  const pathFillGreen = greenLineD + " L 170 180 L 5 180 Z";
+  const pathFillBlack = blackLineD + " L 280 180 L 170 180 Z";
+  
   return (
-    <View style={styles.barChart}>
-      <View style={styles.barChartBars}>
-        {data.slice(-7).map((d, i) => {
-          const height = maxVal > 0 ? (d.total / maxVal) * 120 : 0;
-          const isOverGoal = d.total > goal;
+    <View style={{ width: '100%', height: 210, marginTop: 10 }}>
+      <Svg width="100%" height="100%" viewBox={`0 0 ${chartW} 200`}>
+        <Defs>
+          <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#31d187" stopOpacity="0.15" />
+            <Stop offset="1" stopColor="#31d187" stopOpacity="0" />
+          </SvgLinearGradient>
+          <SvgLinearGradient id="gradBlack" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#000000" stopOpacity="0.08" />
+            <Stop offset="1" stopColor="#000000" stopOpacity="0" />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* Y-axis grid lines & labels */}
+        {[140, 135, 130, 125, 120].map((val, i) => {
+          const y = i * 40 + 20;
           return (
-            <View key={d.date} style={styles.barColumn}>
-              <View style={styles.barWrapper}>
-                <View
-                  style={[
-                    styles.bar,
-                    {
-                      height,
-                      backgroundColor: isOverGoal
-                        ? colors.warningOrange
-                        : colors.tint,
-                      borderRadius: 6,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.barLabel, { color: colors.textTertiary }]}>
-                {days[i] || d.date.slice(-2)}
-              </Text>
-            </View>
+            <G key={`y-${val}`}>
+              <Line x1="25" y1={y} x2={chartW} y2={y} stroke="#f0f0f0" strokeWidth="1" strokeDasharray="3, 3" />
+              <SvgText x="0" y={y + 4} fontSize="11" fill="#bbb" fontWeight="500">{val}</SvgText>
+            </G>
           );
         })}
-      </View>
-    </View>
-  );
-}
 
-function WeightLineChart({
-  data,
-  colors,
-}: {
-  data: { date: string; weight: number }[];
-  colors: ReturnType<typeof useThemeColors>;
-}) {
-  const chartW = 280;
-  const chartH = 100;
-  const padding = 20;
-  const minW = Math.min(...data.map((d) => d.weight)) - 1;
-  const maxW = Math.max(...data.map((d) => d.weight)) + 1;
-
-  const points = data.map((d, i) => {
-    const x = padding + (i / (data.length - 1)) * (chartW - padding * 2);
-    const y =
-      chartH -
-      padding -
-      ((d.weight - minW) / (maxW - minW)) * (chartH - padding * 2);
-    return `${x},${y}`;
-  });
-
-  return (
-    <View style={styles.lineChart}>
-      <Svg width={chartW} height={chartH}>
-        <Polyline
-          points={points.join(" ")}
-          fill="none"
-          stroke={colors.accentEmerald}
-          strokeWidth={2.5}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        {data.map((d, i) => {
-          const x = padding + (i / (data.length - 1)) * (chartW - padding * 2);
-          const y =
-            chartH -
-            padding -
-            ((d.weight - minW) / (maxW - minW)) * (chartH - padding * 2);
-          return (
-            <Circle key={i} cx={x} cy={y} r={4} fill={colors.accentEmerald} />
-          );
+        {/* X-axis labels */}
+        {["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"].map((month, i) => {
+          const x = i * 45 + 25;
+          return <SvgText key={`x-${month}`} x={x} y="195" fontSize="11" fill="#bbb" fontWeight="500">{month}</SvgText>;
         })}
+
+        {/* Fill Areas */}
+        <Path d={pathFillGreen} fill="url(#grad)" />
+        <Path d={pathFillBlack} fill="url(#gradBlack)" />
+
+        {/* Line itself */}
+        <Path d={greenLineD} fill="none" stroke="#26b872" strokeWidth="2.5" />
+        <Path d={blackLineD} fill="none" stroke="#1c1c1c" strokeWidth="2.5" />
+
+        {/* Data Point at Tooltip */}
+        <Line x1="170" y1="65" x2="170" y2="180" stroke="#26b872" strokeWidth="1" />
+        <Circle cx="170" cy="65" r="4.5" fill="#FFF" stroke="#26b872" strokeWidth="2" />
+        
+        {/* Tooltip */}
+        <G x="145" y="15">
+          <Rect width="80" height="42" rx="12" fill="#222" />
+          <SvgText x="40" y="18" fontSize="12" fill="#FFF" fontWeight="700" textAnchor="middle">131.2 lbs</SvgText>
+          <SvgText x="40" y="32" fontSize="10" fill="#999" textAnchor="middle">Sep 9, 2025</SvgText>
+        </G>
       </Svg>
-      <View style={styles.weightLabels}>
-        <Text style={[styles.weightLabel, { color: colors.textTertiary }]}>
-          {data[0]?.weight.toFixed(1)} kg
-        </Text>
-        <Text style={[styles.weightLabel, { color: colors.textTertiary }]}>
-          {data[data.length - 1]?.weight.toFixed(1)} kg
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-function MacroPieSlice({
-  label,
-  value,
-  color,
-  colors,
-}: {
-  label: string;
-  value: number;
-  color: string;
-  colors: ReturnType<typeof useThemeColors>;
-}) {
-  return (
-    <View style={styles.macroSlice}>
-      <View style={[styles.macroSliceDot, { backgroundColor: color }]} />
-      <Text style={[styles.macroSliceLabel, { color: colors.textSecondary }]}>
-        {label}
-      </Text>
-      <Text style={[styles.macroSliceValue, { color: colors.text }]}>
-        {value}%
-      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, gap: 24 },
-  title: { fontSize: 28, fontFamily: "Poppins_700Bold", marginBottom: 4 },
-  sectionTitle: { fontSize: 18, fontFamily: "Poppins_700Bold", marginTop: 8 },
-  healthScoreCard: { overflow: "hidden" },
-  healthScoreContent: { flexDirection: "row", alignItems: "center", gap: 20 },
-  healthScoreValue: { fontSize: 28, fontFamily: "Poppins_700Bold" },
-  healthScoreInfo: { flex: 1, gap: 6 },
-  healthScoreHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  healthScoreLabel: { fontSize: 14, fontFamily: "Poppins_600SemiBold" },
-  healthScoreDesc: {
+  container: { flex: 1, backgroundColor: "#fcfdfd" },
+  scrollContent: { paddingHorizontal: 20, gap: 16 },
+  title: { fontSize: 32, fontWeight: "700", marginBottom: 8, color: "#111" },
+  
+  topCardsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 16,
+    height: 180,
+  },
+  
+  weightCardWrapper: {
+    flex: 1,
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+    justifyContent: "space-between",
+  },
+  weightCardContent: {
+    padding: 18,
+    alignItems: "center",
+  },
+  cardHeaderSmall: {
     fontSize: 13,
-    fontFamily: "Poppins_400Regular",
-    lineHeight: 18,
+    color: "#555",
+    fontWeight: "500",
+    marginBottom: 6,
+  },
+  weightValueMain: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#111",
+    marginBottom: 16,
+  },
+  weightUnit: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#111",
+  },
+  progressTrack: {
+    width: "100%",
+    height: 6,
+    backgroundColor: "#f0f0f0",
+    borderRadius: 3,
+    marginBottom: 6,
+  },
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#1c1c1e",
+    borderRadius: 3,
+  },
+  goalText: {
+    fontSize: 12,
+    color: "#888",
+  },
+  goalTextBold: {
+    fontWeight: "700",
+    color: "#333",
+  },
+  logWeightBtn: {
+    backgroundColor: "#1c1c1e",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  logWeightBtnText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  streakCard: {
+    flex: 1,
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    padding: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  flameContainer: {
+    position: "relative",
+    marginBottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    height: 70,
+  },
+  flameIcon: {
+    position: "absolute",
+    top: 5,
+    textShadowColor: "rgba(255,159,28,0.4)",
+    textShadowOffset: { width: 0, height: 4 },
+    textShadowRadius: 8,
+  },
+  sparkle1: {
+    position: "absolute",
+    top: -5,
+    right: -25,
+  },
+  sparkle2: {
+    position: "absolute",
+    top: 10,
+    left: -20,
+  },
+  streakNumberContainer: {
+    position: "absolute",
+    top: 25,
+    alignItems: "center",
+  },
+  streakNumber: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: "#FFF",
+  },
+  streakTextContainer: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  streakLabel: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#FF9F1C",
+  },
+  weekRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 2,
+  },
+  dayCol: {
+    alignItems: "center",
+    gap: 6,
+  },
+  dayText: {
+    fontSize: 11,
+    color: "#bbb",
+    fontWeight: "700",
+  },
+  dayTextActive: {
+    color: "#FF9F1C",
+  },
+  checkedCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#FF9F1C",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  uncheckedCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#f0f0f0",
+  },
+
+  chartCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
   },
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
   },
-  chartAvg: { fontSize: 13, fontFamily: "Poppins_400Regular" },
-  goalLine: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
-  goalLineText: { fontSize: 11, fontFamily: "Poppins_600SemiBold" },
-  barChart: { alignItems: "center" },
-  barChartBars: {
+  chartTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#222",
+  },
+  flagPill: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    height: 140,
-    alignItems: "flex-end",
+    alignItems: "center",
+    backgroundColor: "#f5f5f7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
   },
-  barColumn: { flex: 1, alignItems: "center", gap: 6 },
-  barWrapper: { height: 120, justifyContent: "flex-end" },
-  bar: { width: 24, minHeight: 4 },
-  barLabel: { fontSize: 11, fontFamily: "Poppins_500Medium" },
-  lineChart: { alignItems: "center", paddingVertical: 8 },
-  weightLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    marginTop: 8,
-  },
-  weightLabel: { fontSize: 12, fontFamily: "Poppins_500Medium" },
-  macroBalanceRow: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 16,
-  },
-  macroSlice: { alignItems: "center", gap: 4 },
-  macroSliceDot: { width: 10, height: 10, borderRadius: 5 },
-  macroSliceLabel: { fontSize: 12, fontFamily: "Poppins_400Regular" },
-  macroSliceValue: { fontSize: 18, fontFamily: "Poppins_700Bold" },
-  macroBalanceBar: {
-    height: 10,
-    borderRadius: 5,
-    flexDirection: "row",
-    overflow: "hidden",
-  },
-  macroSegment: { height: "100%" },
-  summaryRow: { flexDirection: "row", gap: 12 },
-  summaryCard: { flex: 1, alignItems: "center", gap: 6 },
-  summaryValue: { fontSize: 22, fontFamily: "Poppins_700Bold" },
-  summaryLabel: {
+  flagText: {
     fontSize: 12,
-    fontFamily: "Poppins_400Regular",
-    textAlign: "center",
+    fontWeight: "800",
+    color: "#111",
+  },
+  flagSubText: {
+    fontWeight: "500",
+    color: "#888",
+  },
+  chartArea: {
+    width: "100%",
+  },
+  timeSelector: {
+    flexDirection: "row",
+    backgroundColor: "#f5f5f7",
+    borderRadius: 20,
+    padding: 4,
+    marginTop: 10,
+    justifyContent: "space-between",
+  },
+  timeOptionBox: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+  },  
+  timeOption: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#888",
+  },
+  timeOptionActive: {
+    flex: 1.2,
+    backgroundColor: "#FFF",
+    borderRadius: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+  },
+  timeTextActive: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#111",
+  },
+  motivationalPill: {
+    backgroundColor: "#ecfaef",
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  motivationalText: {
+    color: "#31d187",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  calorieRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginTop: 12,
+    gap: 8,
+  },
+  calorieValue: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: "#111",
+    lineHeight: 40,
+  },
+  calorieUnit: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#aaa",
+  },
+  calTrendText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#38b000",
+    marginLeft: 2,
   },
 });

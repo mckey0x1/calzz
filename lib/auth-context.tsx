@@ -4,6 +4,8 @@ import React, {
   useState,
   useEffect,
   useMemo,
+  useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { Platform, Alert } from "react-native";
@@ -44,6 +46,8 @@ interface AuthContextValue {
   isLoading: boolean;
   isSigningIn: boolean;
   firebaseReady: boolean;
+  justSignedOut: boolean;
+  clearJustSignedOut: () => void;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -57,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [firebaseReady, setFirebaseReady] = useState(false);
+  const [justSignedOut, setJustSignedOut] = useState(false);
+  const justSignedOutRef = useRef(false);
   const [clientId, setClientId] = useState<string | undefined>(
     getGoogleWebClientId() || undefined,
   );
@@ -79,6 +85,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const unsubscribe = onAuthStateChanged(
           authInstance,
           async (firebaseUser) => {
+            // If we just signed out, don't re-set user to a stale value
+            if (justSignedOutRef.current && firebaseUser) {
+              return;
+            }
             setUser(firebaseUser);
             if (firebaseUser) {
               await loadOrCreateProfile(firebaseUser);
@@ -148,6 +158,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Firebase not ready yet");
       return;
     }
+    // Reset the logout marker when starting a new sign-in flow.
+    setJustSignedOut(false);
+
     try {
       setIsSigningIn(true);
       if (Platform.OS === "web") {
@@ -200,14 +213,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signOut() {
     try {
+      justSignedOutRef.current = true;
+      setJustSignedOut(true);
       const authInstance = getFirebaseAuth();
       await firebaseSignOut(authInstance);
+      if (Platform.OS !== "web") {
+        try {
+          await GoogleSignin.signOut();
+        } catch (e) {
+          console.log("Google SignOut error:", e);
+        }
+      }
       setUser(null);
       setUserProfile(null);
     } catch (error) {
       console.error("Sign out error:", error);
     }
   }
+
+  const clearJustSignedOut = React.useCallback(() => {
+    justSignedOutRef.current = false;
+    setJustSignedOut(false);
+  }, []);
 
   async function deleteAccount() {
     if (!user) return;
@@ -219,6 +246,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const authInstance = getFirebaseAuth();
       if (authInstance.currentUser) {
         await authInstance.currentUser.delete();
+      }
+      if (Platform.OS !== "web") {
+        try {
+          // revokeAccess forces Google backend to decouple the token
+          await GoogleSignin.revokeAccess();
+          await GoogleSignin.signOut();
+        } catch (e) {
+          console.log("Google SignOut/Revoke error:", e);
+        }
       }
       setUser(null);
       setUserProfile(null);
@@ -235,11 +271,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       isSigningIn,
       firebaseReady,
+      justSignedOut,
+      clearJustSignedOut,
       signInWithGoogle,
       signOut,
       deleteAccount,
     }),
-    [user, userProfile, isLoading, isSigningIn, firebaseReady],
+    [user, userProfile, isLoading, isSigningIn, firebaseReady, justSignedOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

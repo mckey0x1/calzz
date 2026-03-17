@@ -51,7 +51,7 @@ export default function OnboardingScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const colors = useThemeColors("light"); // we know this project is locked to light
-  const { signInWithGoogle, isSigningIn, user, isLoading } = useAuth();
+  const { signInWithGoogle, isSigningIn, user, isLoading, justSignedOut, clearJustSignedOut } = useAuth();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -79,11 +79,13 @@ export default function OnboardingScreen() {
   };
 
   useEffect(() => {
-    // Automatically skip onboarding if user is logged in
-    if (!isLoading && user) {
+    if (!isLoading && user && !justSignedOut) {
       router.replace("/(tabs)");
     }
-  }, [user, isLoading]);
+    if (!isLoading && !user && justSignedOut) {
+      clearJustSignedOut();
+    }
+  }, [user, isLoading, justSignedOut, clearJustSignedOut]);
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;

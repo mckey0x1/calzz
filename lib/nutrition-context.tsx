@@ -49,6 +49,10 @@ export interface UserGoals {
   dietPreference: "balanced" | "keto" | "vegan" | "high-protein";
   waterGoal: number;
   stepsGoal: number;
+  heightFt?: number;
+  heightIn?: number;
+  dateOfBirth?: string;
+  gender?: string;
 }
 
 interface NutritionContextValue {
@@ -87,6 +91,10 @@ const DEFAULT_GOALS: UserGoals = {
   dietPreference: "balanced",
   waterGoal: 8,
   stepsGoal: 10000,
+  heightFt: 5,
+  heightIn: 6,
+  dateOfBirth: "01/01/2001",
+  gender: "Male",
 };
 
 function getDateKey(date: Date = new Date()): string {
