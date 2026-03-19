@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView, Animated } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -9,7 +9,7 @@ import { useThemeColors } from "@/constants/colors";
 
 const ITEM_HEIGHT = 40;
 
-function CustomPicker({ items, selectedValue, onValueChange, label }: any) {
+function CustomPicker({ items, selectedValue, onValueChange, label, width = 80 }: any) {
   const scrollViewRef = useRef<ScrollView>(null);
   
   useEffect(() => {
@@ -30,7 +30,7 @@ function CustomPicker({ items, selectedValue, onValueChange, label }: any) {
   };
 
   return (
-    <View style={styles.pickerContainer}>
+    <View style={[styles.pickerContainer, { width }]}>
       <View style={styles.selectionHighlight} />
       <ScrollView
         ref={scrollViewRef}
@@ -61,24 +61,42 @@ export default function SetHeightWeightScreen() {
   const colors = useThemeColors(undefined);
   const { goals, updateGoals, updateWeight } = useNutrition();
 
-  const [isImperial, setIsImperial] = useState(true);
+  const [isImperial, setIsImperial] = useState(false);
+  
   const [ft, setFt] = useState(goals.heightFt || 5);
-  const [inch, setInch] = useState(goals.heightIn || 6);
+  const [inch, setInch] = useState(goals.heightIn !== undefined ? goals.heightIn : 6);
   const [weight, setWeightState] = useState(goals.currentWeight || 120);
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top + 10;
+  const initialCm = Math.round(( (goals.heightFt || 5) * 12 + (goals.heightIn !== undefined ? goals.heightIn : 6) ) * 2.54);
+  const initialKg = Math.round((goals.currentWeight || 120) * 0.453592);
+
+  const [cm, setCm] = useState(initialCm);
+  const [kg, setKg] = useState(initialKg);
+
+  const topInset = Platform.OS === "web" ? 40 : insets.top + 20;
   
   const handleBack = () => router.back();
   
   const handleSave = () => {
-    updateGoals({ heightFt: ft, heightIn: inch });
-    updateWeight(weight);
+    if (isImperial) {
+      updateGoals({ heightFt: ft, heightIn: inch });
+      updateWeight(weight);
+    } else {
+      const totalInches = cm / 2.54;
+      const hFt = Math.floor(totalInches / 12);
+      const hIn = Math.round(totalInches % 12);
+      updateGoals({ heightFt: hFt, heightIn: hIn });
+      updateWeight(Math.round(kg * 2.20462));
+    }
     router.back();
   };
 
   const feetItems = Array.from({ length: 6 }, (_, i) => i + 3); // 3 to 8
   const inchItems = Array.from({ length: 12 }, (_, i) => i); // 0 to 11
   const weightItems = Array.from({ length: 251 }, (_, i) => i + 50); // 50 to 300
+
+  const cmItems = Array.from({ length: 161 }, (_, i) => i + 90); // 90 to 250
+  const kgItems = Array.from({ length: 181 }, (_, i) => i + 20); // 20 to 200
 
   return (
     <View style={[styles.container, { backgroundColor: "#fff" }]}>
@@ -101,7 +119,7 @@ export default function SetHeightWeightScreen() {
         <View style={styles.toggleRow}>
           <Text style={[styles.toggleText, isImperial ? styles.toggleTextActive : styles.toggleTextInactive]}>Imperial</Text>
           <Pressable
-            style={[styles.toggleSwitch, isImperial ? styles.switchImperial : styles.switchMetric]}
+            style={[styles.toggleSwitch, !isImperial ? styles.switchDark : styles.switchLight]}
             onPress={() => setIsImperial(!isImperial)}
           >
             <View style={[styles.switchThumb, isImperial ? styles.thumbLeft : styles.thumbRight]} />
@@ -109,20 +127,37 @@ export default function SetHeightWeightScreen() {
           <Text style={[styles.toggleText, !isImperial ? styles.toggleTextActive : styles.toggleTextInactive]}>Metric</Text>
         </View>
 
-        {/* Labels */}
-        <View style={styles.labelsRow}>
-          <Text style={styles.columnLabel}>Height</Text>
-          <Text style={styles.columnLabel}>Weight</Text>
-        </View>
-
-        {/* Pickers */}
-        <View style={styles.pickersRow}>
-          <View style={styles.heightPickers}>
-            <CustomPicker items={feetItems} selectedValue={ft} onValueChange={setFt} label="ft" />
-            <CustomPicker items={inchItems} selectedValue={inch} onValueChange={setInch} label="in" />
+        {/* Pickers Section */}
+        <View style={styles.selectionArea}>
+          {/* Labels */}
+          <View style={styles.labelsRow}>
+            <View style={styles.columnHeader}>
+              <Text style={styles.columnLabel}>Height</Text>
+            </View>
+            <View style={styles.columnHeader}>
+              <Text style={styles.columnLabel}>Weight</Text>
+            </View>
           </View>
-          <View style={styles.weightPicker}>
-            <CustomPicker items={weightItems} selectedValue={weight} onValueChange={setWeightState} label="lb" />
+
+          {/* Pickers */}
+          <View style={styles.pickersRow}>
+            <View style={styles.pickerColumn}>
+              {isImperial ? (
+                <View style={styles.heightPickers}>
+                  <CustomPicker items={feetItems} selectedValue={ft} onValueChange={setFt} label="ft" width={70} />
+                  <CustomPicker items={inchItems} selectedValue={inch} onValueChange={setInch} label="in" width={70} />
+                </View>
+              ) : (
+                <CustomPicker items={cmItems} selectedValue={cm} onValueChange={setCm} label="cm" width={140} />
+              )}
+            </View>
+            <View style={styles.pickerColumn}>
+              {isImperial ? (
+                <CustomPicker items={weightItems} selectedValue={weight} onValueChange={setWeightState} label="lb" width={140} />
+              ) : (
+                <CustomPicker items={kgItems} selectedValue={kg} onValueChange={setKg} label="kg" width={140} />
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -167,7 +202,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 40,
+    marginBottom: 50,
     gap: 16,
   },
   toggleText: {
@@ -177,15 +212,14 @@ const styles = StyleSheet.create({
   toggleTextActive: { color: "#1A1A1A" },
   toggleTextInactive: { color: "#D3D3D3" },
   toggleSwitch: {
-    width: 50,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#E0E0E0",
-    padding: 2,
+    width: 56,
+    height: 32,
+    borderRadius: 16,
+    padding: 3,
     justifyContent: "center",
   },
-  switchImperial: { },
-  switchMetric: { },
+  switchLight: { backgroundColor: "#E0E0E0" },
+  switchDark: { backgroundColor: "#2A2A2E" },
   switchThumb: {
     width: 26,
     height: 26,
@@ -194,11 +228,17 @@ const styles = StyleSheet.create({
   },
   thumbLeft: { alignSelf: "flex-start" },
   thumbRight: { alignSelf: "flex-end" },
+  selectionArea: {
+    flex: 1,
+  },
   labelsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 40,
     marginBottom: 20,
+  },
+  columnHeader: {
+    flex: 1,
+    alignItems: "center",
   },
   columnLabel: {
     fontSize: 18,
@@ -208,19 +248,18 @@ const styles = StyleSheet.create({
   pickersRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+  },
+  pickerColumn: {
+    flex: 1,
     alignItems: "center",
-    paddingHorizontal: 20,
   },
   heightPickers: {
     flexDirection: "row",
-    gap: 10,
-  },
-  weightPicker: {
-    width: 120,
+    justifyContent: "center",
+    gap: 4,
   },
   pickerContainer: {
     height: ITEM_HEIGHT * 5,
-    width: 80,
     position: "relative",
   },
   selectionHighlight: {
@@ -229,7 +268,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: ITEM_HEIGHT,
-    backgroundColor: "#F0F0F0",
+    backgroundColor: "#EBEBEB",
     borderRadius: 10,
     zIndex: 0,
   },
@@ -255,7 +294,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: "#1A1A1A",
     borderRadius: 30,
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: "center",
   },
   saveBtnText: {

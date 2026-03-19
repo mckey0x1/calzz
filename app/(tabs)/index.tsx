@@ -11,7 +11,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  FontAwesome5,
+} from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
@@ -19,13 +23,26 @@ import { useAuth } from "@/lib/auth-context";
 import { useNutrition } from "@/lib/nutrition-context";
 
 // Simple Progress Ring component for inline usage
-function ProgressRing({ size, progress, color, trackColor, strokeWidth, children }: any) {
+function ProgressRing({
+  size,
+  progress,
+  color,
+  trackColor,
+  strokeWidth,
+  children,
+}: any) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
   const strokeDashoffset = circumference - progress * circumference;
 
   return (
-    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
       <Svg width={size} height={size}>
         <Circle
           stroke={trackColor}
@@ -72,7 +89,10 @@ export default function DashboardScreen() {
     }
   }, [isAnalyzing, scanResult]);
 
-  const progress = Math.min((totalCalories || 0) / (goals.dailyCalories || 2500), 1);
+  const progress = Math.min(
+    (totalCalories || 0) / (goals.dailyCalories || 2500),
+    1,
+  );
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   // Mock days for the date strip
@@ -102,8 +122,6 @@ export default function DashboardScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}>
-        
-        {/* Header */}
         <View style={styles.headerRow}>
           <View style={styles.logoAndTitle}>
             <Ionicons name="logo-apple" size={24} color="#111" />
@@ -115,8 +133,10 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Date Strip */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateStrip}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dateStrip}>
           {days.map((d, index) => {
             let circleStyle = styles.dateCirclePast;
             let textStyle = styles.dateTextPast;
@@ -131,7 +151,10 @@ export default function DashboardScreen() {
               circleStyle = styles.dateCircleActive;
               textStyle = styles.dateTextActive;
               dayTextStyle = styles.dayTextActive;
-              wrapperStyle = [styles.dateItemWrapper, styles.dateItemWrapperActive];
+              wrapperStyle = [
+                styles.dateItemWrapper,
+                styles.dateItemWrapperActive,
+              ];
             } else if (d.state === "future") {
               circleStyle = styles.dateCircleFuture;
               textStyle = styles.dateTextFuture;
@@ -149,12 +172,13 @@ export default function DashboardScreen() {
           })}
         </ScrollView>
 
-        {/* Main Calorie Ring Card */}
         <View style={styles.mainCalorieCard}>
           <View style={styles.calorieTextContainer}>
             <View style={styles.calorieValues}>
               <Text style={styles.calorieEaten}>{totalCalories || 1250}</Text>
-              <Text style={styles.calorieGoal}>/{goals.dailyCalories || 2500}</Text>
+              <Text style={styles.calorieGoal}>
+                /{goals.dailyCalories || 2500}
+              </Text>
             </View>
             <Text style={styles.calorieSubtitle}>Calories eaten</Text>
           </View>
@@ -172,8 +196,10 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Macros Row */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.macrosScroll}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.macrosScroll}>
           <View style={styles.macroCard}>
             <View style={styles.macroTextHeader}>
               <Text style={styles.macroVal}>{totalProtein || 75}</Text>
@@ -181,9 +207,18 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.macroLabel}>Protein eaten</Text>
             <View style={styles.macroRingWrapper}>
-              <ProgressRing size={64} progress={(totalProtein || 75)/(goals.proteinGoal || 150)} color="#e65c5c" trackColor="#f5f5f5" strokeWidth={5}>
+              <ProgressRing
+                size={64}
+                progress={(totalProtein || 75) / (goals.proteinGoal || 150)}
+                color="#e65c5c"
+                trackColor="#f5f5f5"
+                strokeWidth={5}>
                 <View style={styles.macroIconCenter}>
-                  <FontAwesome5 name="drumstick-bite" size={20} color="#e65c5c" />
+                  <FontAwesome5
+                    name="drumstick-bite"
+                    size={20}
+                    color="#e65c5c"
+                  />
                 </View>
               </ProgressRing>
             </View>
@@ -196,9 +231,18 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.macroLabel}>Carbs eaten</Text>
             <View style={styles.macroRingWrapper}>
-              <ProgressRing size={64} progress={(totalCarbs || 138)/(goals.carbsGoal || 275)} color="#e89e5d" trackColor="#f5f5f5" strokeWidth={5}>
+              <ProgressRing
+                size={64}
+                progress={(totalCarbs || 138) / (goals.carbsGoal || 275)}
+                color="#e89e5d"
+                trackColor="#f5f5f5"
+                strokeWidth={5}>
                 <View style={styles.macroIconCenter}>
-                  <MaterialCommunityIcons name="barley" size={24} color="#e89e5d" />
+                  <MaterialCommunityIcons
+                    name="barley"
+                    size={24}
+                    color="#e89e5d"
+                  />
                 </View>
               </ProgressRing>
             </View>
@@ -211,16 +255,24 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.macroLabel}>Fat eaten</Text>
             <View style={styles.macroRingWrapper}>
-              <ProgressRing size={64} progress={(totalFat || 35)/(goals.fatGoal || 70)} color="#5a8bed" trackColor="#f5f5f5" strokeWidth={5}>
+              <ProgressRing
+                size={64}
+                progress={(totalFat || 35) / (goals.fatGoal || 70)}
+                color="#5a8bed"
+                trackColor="#f5f5f5"
+                strokeWidth={5}>
                 <View style={styles.macroIconCenter}>
-                  <MaterialCommunityIcons name="peanut" size={22} color="#5a8bed" />
+                  <MaterialCommunityIcons
+                    name="peanut"
+                    size={22}
+                    color="#5a8bed"
+                  />
                 </View>
               </ProgressRing>
             </View>
           </View>
         </ScrollView>
-        
-        {/* Pagination Dots indicating swiping for macros (visual only) */}
+
         <View style={styles.paginationDots}>
           <View style={[styles.dot, styles.dotActive]} />
           <View style={[styles.dot, styles.dotInactive]} />
@@ -230,30 +282,42 @@ export default function DashboardScreen() {
         {/* Recently Uploaded Section */}
         <View style={styles.recentSection}>
           <Text style={styles.sectionTitle}>Recently uploaded</Text>
-          
-          <Pressable style={styles.recentCard} onPress={() => router.push('/food-log')}>
-            <Image 
-              source={{uri: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=600&auto=format&fit=crop"}} 
-              style={styles.recentImage} 
+
+          <Pressable
+            style={styles.recentCard}
+            onPress={() => router.push("/food-log")}>
+            <Image
+              source={{
+                uri: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=600&auto=format&fit=crop",
+              }}
+              style={styles.recentImage}
             />
             <View style={styles.recentDetails}>
               <View style={styles.recentHeader}>
                 <Text style={styles.recentTitle}>Grilled Salmon</Text>
                 <Text style={styles.recentTime}>12:37pm</Text>
               </View>
-              
+
               <View style={styles.recentStats}>
                 <Ionicons name="flame" size={14} color="#111" />
                 <Text style={styles.recentCalories}>550 Calories</Text>
               </View>
-              
+
               <View style={styles.recentMacrosRow}>
                 <View style={styles.recentMacroItem}>
-                  <FontAwesome5 name="drumstick-bite" size={10} color="#e65c5c" />
+                  <FontAwesome5
+                    name="drumstick-bite"
+                    size={10}
+                    color="#e65c5c"
+                  />
                   <Text style={styles.recentMacroText}>35g</Text>
                 </View>
                 <View style={styles.recentMacroItem}>
-                  <MaterialCommunityIcons name="barley" size={12} color="#e89e5d" />
+                  <MaterialCommunityIcons
+                    name="barley"
+                    size={12}
+                    color="#e89e5d"
+                  />
                   <Text style={styles.recentMacroText}>40g</Text>
                 </View>
                 <View style={styles.recentMacroItem}>
@@ -264,9 +328,10 @@ export default function DashboardScreen() {
             </View>
           </Pressable>
 
-          {/* Placeholder for a second card partially visible */ }
-           <View style={[styles.recentCard, { opacity: 0.5, marginBottom: 0 }]}>
-            <View style={[styles.recentImage, { backgroundColor: '#e0e0e0' }]} />
+          <View style={[styles.recentCard, { opacity: 0.5, marginBottom: 0 }]}>
+            <View
+              style={[styles.recentImage, { backgroundColor: "#e0e0e0" }]}
+            />
             <View style={styles.recentDetails}>
               <View style={styles.recentHeader}>
                 <Text style={styles.recentTitle}>Avocado Toast</Text>
@@ -274,9 +339,7 @@ export default function DashboardScreen() {
               </View>
             </View>
           </View>
-
         </View>
-
       </ScrollView>
     </View>
   );
@@ -285,7 +348,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: { paddingHorizontal: 0, gap: 20 },
-  
+
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -339,11 +402,31 @@ const styles = StyleSheet.create({
   dateItemWrapperActive: {
     backgroundColor: "#f7f7f9",
   },
-  dayTextPast: { fontSize: 13, fontWeight: "600", color: "#b0b0b0", marginBottom: 8 },
-  dayTextCompleted: { fontSize: 13, fontWeight: "600", color: "#a5d89b", marginBottom: 8 },
-  dayTextActive: { fontSize: 13, fontWeight: "700", color: "#111", marginBottom: 8 },
-  dayTextFuture: { fontSize: 13, fontWeight: "600", color: "#ccc", marginBottom: 8 },
-  
+  dayTextPast: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#b0b0b0",
+    marginBottom: 8,
+  },
+  dayTextCompleted: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#a5d89b",
+    marginBottom: 8,
+  },
+  dayTextActive: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111",
+    marginBottom: 8,
+  },
+  dayTextFuture: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#ccc",
+    marginBottom: 8,
+  },
+
   dateCircle: {
     width: 44,
     height: 44,
@@ -354,8 +437,16 @@ const styles = StyleSheet.create({
   },
   dateCirclePast: { borderColor: "#d8d8d8", borderStyle: "dashed" },
   dateCircleCompleted: { borderColor: "#2fb344", borderStyle: "solid" },
-  dateCircleActive: { borderColor: "#111", borderStyle: "solid", borderWidth: 2 },
-  dateCircleFuture: { borderColor: "#eee", borderStyle: "solid", backgroundColor: "#f9f9fb" },
+  dateCircleActive: {
+    borderColor: "#111",
+    borderStyle: "solid",
+    borderWidth: 2,
+  },
+  dateCircleFuture: {
+    borderColor: "#eee",
+    borderStyle: "solid",
+    backgroundColor: "#f9f9fb",
+  },
 
   dateTextPast: { fontSize: 16, fontWeight: "600", color: "#b0b0b0" },
   dateTextCompleted: { fontSize: 16, fontWeight: "600", color: "#111" },
@@ -550,5 +641,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#888",
   },
-
 });

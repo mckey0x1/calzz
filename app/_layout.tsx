@@ -24,31 +24,39 @@ function RootLayoutNav() {
     <>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerBackTitle: "Back" }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen
           name="onboarding-questions"
-          options={{ headerShown: false }}
+          options={{ headerShown: false, animation: "slide_from_right" }}
         />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen
           name="scanner"
-          options={{ headerShown: false, presentation: "fullScreenModal" }}
+          options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_right" }}
         />
         <Stack.Screen
           name="scan-result"
-          options={{ headerShown: false, presentation: "modal" }}
+          options={{ headerShown: false, presentation: "modal", animation: "slide_from_right" }}
         />
         <Stack.Screen
           name="privacy-policy"
-          options={{ headerShown: false, presentation: "modal" }}
+          options={{ headerShown: false, presentation: "modal", animation: "slide_from_right" }}
         />
         <Stack.Screen
           name="terms"
-          options={{ headerShown: false, presentation: "modal" }}
+          options={{ headerShown: false, presentation: "modal", animation: "slide_from_right" }}
         />
         <Stack.Screen
           name="feature-requests"
-          options={{ headerShown: false }}
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="personal-details"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
+        <Stack.Screen
+          name="edit-nutrition-goals"
+          options={{ headerShown: false, animation: "slide_from_right" }}
         />
       </Stack>
     </>

@@ -62,7 +62,7 @@ export default function SetGenderScreen() {
 
   const [gender, setGender] = useState(goals.gender || "Male");
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top + 10;
+  const topInset = Platform.OS === "web" ? 40 : insets.top + 20;
   
   const handleBack = () => router.back();
   
@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: "#1A1A1A",
     borderRadius: 30,
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: "center",
   },
   saveBtnText: {

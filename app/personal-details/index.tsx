@@ -14,7 +14,7 @@ export default function PersonalDetailsScreen() {
 
   const handleBack = () => router.back();
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top + 10;
+  const topInset = Platform.OS === "web" ? 40 : insets.top + 20;
 
   return (
     <View style={[styles.container, { backgroundColor: "#fff" }]}>
@@ -29,7 +29,7 @@ export default function PersonalDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
         </Pressable>
         <Text style={styles.headerTitle}>Personal details</Text>
-        <View style={{ width: 40 }} /> {/* Placeholder for balance */}
+        <View style={{ width: 40 }} /> 
       </View>
 
       <View style={styles.content}>

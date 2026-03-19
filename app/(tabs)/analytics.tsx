@@ -11,14 +11,24 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
-import Svg, { Path, Circle, Defs, LinearGradient as SvgLinearGradient, Stop, G, Text as SvgText, Rect, Line } from "react-native-svg";
+import Svg, {
+  Path,
+  Circle,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  Stop,
+  G,
+  Text as SvgText,
+  Rect,
+  Line,
+} from "react-native-svg";
 import { useThemeColors } from "@/constants/colors";
 
 export default function AnalyticsScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  
+
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
@@ -44,12 +54,16 @@ export default function AnalyticsScreen() {
           <View style={styles.weightCardWrapper}>
             <View style={styles.weightCardContent}>
               <Text style={styles.cardHeaderSmall}>Your Weight</Text>
-              <Text style={styles.weightValueMain}>132.1 <Text style={styles.weightUnit}>lbs</Text></Text>
-              
+              <Text style={styles.weightValueMain}>
+                132.1 <Text style={styles.weightUnit}>lbs</Text>
+              </Text>
+
               <View style={styles.progressTrack}>
                 <View style={[styles.progressFill, { width: "15%" }]} />
               </View>
-              <Text style={styles.goalText}>Goal <Text style={styles.goalTextBold}>140 lbs</Text></Text>
+              <Text style={styles.goalText}>
+                Goal <Text style={styles.goalTextBold}>140 lbs</Text>
+              </Text>
             </View>
             <Pressable style={styles.logWeightBtn}>
               <Text style={styles.logWeightBtnText}>Log Weight</Text>
@@ -60,10 +74,25 @@ export default function AnalyticsScreen() {
           {/* Streak Card */}
           <View style={styles.streakCard}>
             <View style={styles.flameContainer}>
-              <Ionicons name="flame" size={50} color="#FF9F1C" style={styles.flameIcon} />
-              <Ionicons name="sparkles" size={14} color="#F3E5AB" style={styles.sparkle1} />
-              <Ionicons name="sparkles" size={12} color="#F3E5AB" style={styles.sparkle2} />
-              
+              <Ionicons
+                name="flame"
+                size={50}
+                color="#FF9F1C"
+                style={styles.flameIcon}
+              />
+              <Ionicons
+                name="sparkles"
+                size={14}
+                color="#F3E5AB"
+                style={styles.sparkle1}
+              />
+              <Ionicons
+                name="sparkles"
+                size={12}
+                color="#F3E5AB"
+                style={styles.sparkle2}
+              />
+
               <View style={styles.streakNumberContainer}>
                 <Text style={styles.streakNumber}>21</Text>
               </View>
@@ -71,13 +100,19 @@ export default function AnalyticsScreen() {
             <View style={styles.streakTextContainer}>
               <Text style={styles.streakLabel}>Day Streak</Text>
             </View>
-            
+
             <View style={styles.weekRow}>
               {["S", "M", "T", "W", "T", "F", "S"].map((day, i) => {
-                const isChecked = i < 2; 
+                const isChecked = i < 2;
                 return (
                   <View key={i} style={styles.dayCol}>
-                    <Text style={[styles.dayText, isChecked && styles.dayTextActive]}>{day}</Text>
+                    <Text
+                      style={[
+                        styles.dayText,
+                        isChecked && styles.dayTextActive,
+                      ]}>
+                      {day}
+                    </Text>
                     {isChecked ? (
                       <View style={styles.checkedCircle}>
                         <Ionicons name="checkmark" size={10} color="#FFF" />
@@ -98,7 +133,9 @@ export default function AnalyticsScreen() {
             <Text style={styles.chartTitle}>Weight Progress</Text>
             <View style={styles.flagPill}>
               <Ionicons name="flag-outline" size={12} color="#444" />
-              <Text style={styles.flagText}>80% <Text style={styles.flagSubText}>of goal</Text></Text>
+              <Text style={styles.flagText}>
+                80% <Text style={styles.flagSubText}>of goal</Text>
+              </Text>
             </View>
           </View>
 
@@ -134,8 +171,10 @@ export default function AnalyticsScreen() {
         <View style={styles.chartCard}>
           <Text style={styles.chartTitle}>Daily Average Calories</Text>
           <View style={styles.calorieRow}>
-            <Text style={styles.calorieValue}>2861 <Text style={styles.calorieUnit}>cal</Text></Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.calorieValue}>
+              2861 <Text style={styles.calorieUnit}>cal</Text>
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Ionicons name="arrow-up" size={14} color="#38b000" />
               <Text style={styles.calTrendText}>90%</Text>
             </View>
@@ -148,18 +187,19 @@ export default function AnalyticsScreen() {
 
 function ChartSvg() {
   const chartW = 300;
-  
+
   // Adjusted path curves to roughly match the screenshot.
   // We use an SVG viewBox of 0 0 300 200
   // Line goes from left to right.
-  const greenLineD = "M 5 140 Q 15 125, 20 120 T 35 130 T 45 140 T 70 80 Q 90 105, 100 120 T 140 100 T 155 105 T 170 65";
+  const greenLineD =
+    "M 5 140 Q 15 125, 20 120 T 35 130 T 45 140 T 70 80 Q 90 105, 100 120 T 140 100 T 155 105 T 170 65";
   const blackLineD = "M 170 65 Q 185 85, 190 100 T 220 70 T 280 60";
 
   const pathFillGreen = greenLineD + " L 170 180 L 5 180 Z";
   const pathFillBlack = blackLineD + " L 280 180 L 170 180 Z";
-  
+
   return (
-    <View style={{ width: '100%', height: 210, marginTop: 10 }}>
+    <View style={{ width: "100%", height: 210, marginTop: 10 }}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${chartW} 200`}>
         <Defs>
           <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
@@ -177,8 +217,23 @@ function ChartSvg() {
           const y = i * 40 + 20;
           return (
             <G key={`y-${val}`}>
-              <Line x1="25" y1={y} x2={chartW} y2={y} stroke="#f0f0f0" strokeWidth="1" strokeDasharray="3, 3" />
-              <SvgText x="0" y={y + 4} fontSize="11" fill="#bbb" fontWeight="500">{val}</SvgText>
+              <Line
+                x1="25"
+                y1={y}
+                x2={chartW}
+                y2={y}
+                stroke="#f0f0f0"
+                strokeWidth="1"
+                strokeDasharray="3, 3"
+              />
+              <SvgText
+                x="0"
+                y={y + 4}
+                fontSize="11"
+                fill="#bbb"
+                fontWeight="500">
+                {val}
+              </SvgText>
             </G>
           );
         })}
@@ -186,7 +241,17 @@ function ChartSvg() {
         {/* X-axis labels */}
         {["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"].map((month, i) => {
           const x = i * 45 + 25;
-          return <SvgText key={`x-${month}`} x={x} y="195" fontSize="11" fill="#bbb" fontWeight="500">{month}</SvgText>;
+          return (
+            <SvgText
+              key={`x-${month}`}
+              x={x}
+              y="195"
+              fontSize="11"
+              fill="#bbb"
+              fontWeight="500">
+              {month}
+            </SvgText>
+          );
         })}
 
         {/* Fill Areas */}
@@ -198,14 +263,38 @@ function ChartSvg() {
         <Path d={blackLineD} fill="none" stroke="#1c1c1c" strokeWidth="2.5" />
 
         {/* Data Point at Tooltip */}
-        <Line x1="170" y1="65" x2="170" y2="180" stroke="#26b872" strokeWidth="1" />
-        <Circle cx="170" cy="65" r="4.5" fill="#FFF" stroke="#26b872" strokeWidth="2" />
-        
+        <Line
+          x1="170"
+          y1="65"
+          x2="170"
+          y2="180"
+          stroke="#26b872"
+          strokeWidth="1"
+        />
+        <Circle
+          cx="170"
+          cy="65"
+          r="4.5"
+          fill="#FFF"
+          stroke="#26b872"
+          strokeWidth="2"
+        />
+
         {/* Tooltip */}
         <G x="145" y="15">
           <Rect width="80" height="42" rx="12" fill="#222" />
-          <SvgText x="40" y="18" fontSize="12" fill="#FFF" fontWeight="700" textAnchor="middle">131.2 lbs</SvgText>
-          <SvgText x="40" y="32" fontSize="10" fill="#999" textAnchor="middle">Sep 9, 2025</SvgText>
+          <SvgText
+            x="40"
+            y="18"
+            fontSize="12"
+            fill="#FFF"
+            fontWeight="700"
+            textAnchor="middle">
+            131.2 lbs
+          </SvgText>
+          <SvgText x="40" y="32" fontSize="10" fill="#999" textAnchor="middle">
+            Sep 9, 2025
+          </SvgText>
         </G>
       </Svg>
     </View>
@@ -216,14 +305,14 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fcfdfd" },
   scrollContent: { paddingHorizontal: 20, gap: 16 },
   title: { fontSize: 32, fontWeight: "700", marginBottom: 8, color: "#111" },
-  
+
   topCardsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 16,
     height: 180,
   },
-  
+
   weightCardWrapper: {
     flex: 1,
     backgroundColor: "#FFF",
@@ -434,7 +523,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 10,
-  },  
+  },
   timeOption: {
     fontSize: 13,
     fontWeight: "600",

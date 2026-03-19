@@ -5,24 +5,71 @@ import {
   View,
   ScrollView,
   Pressable,
-  useColorScheme,
   Platform,
   Image,
+  useColorScheme,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
 import { CalorieRing } from "@/components/CalorieRing";
+import { LinearGradient } from "expo-linear-gradient";
 
 type Tab = "today" | "yesterday";
 
+// ── Animated progress bar for micronutrients ──
+function MicroProgressBar({
+  current,
+  goal,
+  color,
+  label,
+  unit,
+  icon,
+}: {
+  current: number;
+  goal: number;
+  color: string;
+  label: string;
+  unit: string;
+  icon: React.ReactNode;
+}) {
+  const progress = Math.min(current / goal, 1);
+  return (
+    <View style={microStyles.row}>
+      <View style={[microStyles.iconCircle, { backgroundColor: color + "18" }]}>
+        {icon}
+      </View>
+      <View style={microStyles.barContent}>
+        <View style={microStyles.labelRow}>
+          <Text style={microStyles.label}>{label}</Text>
+          <Text style={microStyles.value}>
+            {current}
+            <Text style={microStyles.goalText}>
+              /{goal}
+              {unit}
+            </Text>
+          </Text>
+        </View>
+        <View style={microStyles.trackBar}>
+          <View
+            style={[
+              microStyles.fillBar,
+              { width: `${progress * 100}%`, backgroundColor: color },
+            ]}
+          />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function FoodLogScreen() {
   const colorScheme = useColorScheme();
-  const colors = useThemeColors("light"); // the screenshot is very light, force light colors for consistent look
   const insets = useSafeAreaInsets();
+  const colors = useThemeColors(colorScheme);
 
   const {
     todayLog,
@@ -37,7 +84,6 @@ export default function FoodLogScreen() {
   const [activeTab, setActiveTab] = useState<Tab>("today");
 
   const yesterdayLog = weekLogs.length > 0 ? weekLogs[5] : null;
-
   const currentLog = activeTab === "today" ? todayLog : yesterdayLog;
 
   const totalCalories =
@@ -47,6 +93,12 @@ export default function FoodLogScreen() {
   const totalCarbs =
     currentLog?.entries.reduce((sum, e) => sum + e.carbs, 0) || 0;
   const totalFat = currentLog?.entries.reduce((sum, e) => sum + e.fat, 0) || 0;
+  const totalFiber =
+    currentLog?.entries.reduce((sum, e) => sum + (e.fiber || 0), 0) || 0;
+  const totalSugar =
+    currentLog?.entries.reduce((sum, e) => sum + (e.sugar || 0), 0) || 0;
+  const totalSodium =
+    currentLog?.entries.reduce((sum, e) => sum + (e.sodium || 0), 0) || 0;
 
   const caloriesLeft = Math.max(0, goals.dailyCalories - totalCalories);
   const proteinLeft = Math.max(0, goals.proteinGoal - totalProtein);
@@ -54,6 +106,9 @@ export default function FoodLogScreen() {
   const fatLeft = Math.max(0, goals.fatGoal - totalFat);
 
   const calProgress = totalCalories / goals.dailyCalories;
+  const proteinProgress = totalProtein / goals.proteinGoal;
+  const carbsProgress = totalCarbs / goals.carbsGoal;
+  const fatProgress = totalFat / goals.fatGoal;
 
   useEffect(() => {
     if (!isAnalyzing && scanResult) {
@@ -65,126 +120,188 @@ export default function FoodLogScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Background Gradient – same as before */}
+      <LinearGradient
+        colors={["#dfffa2ff", "#f3f4d4ff"]}
+        style={StyleSheet.absoluteFill}
+      />
+
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
             paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 24,
-            paddingBottom: Platform.OS === "web" ? 34 + 84 : 140, // extra padding for bottom bar
+            paddingBottom: Platform.OS === "web" ? 34 + 84 : 170,
           },
         ]}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        {/* ───── Header ───── */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>🍏 Cal AI</Text>
+          <Text style={styles.headerTitle}>Food log</Text>
         </View>
 
-        {/* Date Tabs */}
+        {/* ───── Date Tabs ───── */}
         <View style={styles.dateTabs}>
-          <Pressable
-            onPress={() => setActiveTab("today")}
-            style={styles.dateTab}>
-            <Text
+          {(["today", "yesterday"] as Tab[]).map((tab) => (
+            <Pressable
+              key={tab}
+              onPress={() => {
+                setActiveTab(tab);
+                if (Platform.OS !== "web") Haptics.selectionAsync();
+              }}
               style={[
-                styles.dateTabText,
-                activeTab === "today" && styles.dateTabActiveText,
+                styles.dateTab,
+                activeTab === tab && styles.dateTabActive,
               ]}>
-              Today
-            </Text>
-            {activeTab === "today" && <View style={styles.dateTabDot} />}
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveTab("yesterday")}
-            style={styles.dateTab}>
-            <Text
-              style={[
-                styles.dateTabText,
-                activeTab === "yesterday" && styles.dateTabActiveText,
-              ]}>
-              Yesterday
-            </Text>
-            {activeTab === "yesterday" && <View style={styles.dateTabDot} />}
-          </Pressable>
+              <Text
+                style={[
+                  styles.dateTabText,
+                  activeTab === tab && styles.dateTabActiveText,
+                ]}>
+                {tab === "today" ? "Today" : "Yesterday"}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
-        {/* Calories Card */}
-        <View style={styles.caloriesCard}>
-          <View style={styles.caloriesTextContainer}>
-            <Text style={styles.caloriesNumber}>{caloriesLeft}</Text>
-            <Text style={styles.caloriesLabel}>Calories left</Text>
+        {/* ───── Calories Hero Card ───── */}
+        <View style={[styles.heroCard, { backgroundColor: "#fff" }]}>
+          <View style={styles.heroLeft}>
+            <Text style={styles.heroNumber}>{caloriesLeft}</Text>
+            <Text style={styles.heroLabel}>Calories left</Text>
+            <View style={styles.caloriesEaten}>
+              <Ionicons name="flame" size={14} color="#6B7280" />
+              <Text style={styles.caloriesEatenText}>
+                {totalCalories} eaten
+              </Text>
+            </View>
           </View>
-          <View style={styles.caloriesRingContainer}>
+          <View style={styles.heroRing}>
             <CalorieRing
               progress={calProgress}
-              size={90}
-              strokeWidth={8}
-              color="#000"
-              trackColor="#F3F4F6">
-              <Ionicons name="flame" size={24} color="#000" />
+              size={100}
+              strokeWidth={10}
+              color="#1A1A1A"
+              trackColor="#E5E7EB">
+              <Text style={styles.heroRingPercent}>
+                {Math.round(calProgress * 100)}%
+              </Text>
             </CalorieRing>
           </View>
         </View>
 
-        {/* Macros */}
+        {/* ───── Macros Row ───── */}
         <View style={styles.macrosRow}>
-          <View style={styles.macroCard}>
+          {/* Protein */}
+          <View style={[styles.macroCard, { backgroundColor: "#fff" }]}>
+            <View style={styles.macroTop}>
+              <CalorieRing
+                progress={proteinProgress}
+                size={44}
+                strokeWidth={5}
+                color="#e65c5c"
+                trackColor="#FEE2E2">
+                <MaterialCommunityIcons
+                  name="food-drumstick"
+                  size={14}
+                  color="#e65c5c"
+                />
+              </CalorieRing>
+            </View>
             <Text style={styles.macroVal}>{proteinLeft}g</Text>
             <Text style={styles.macroLbl}>Protein left</Text>
-            <View
-              style={[
-                styles.macroIconBg,
-                { borderColor: "#FEE2E2", backgroundColor: "#fff" },
-              ]}>
-              <View
-                style={[
-                  styles.macroIconBgInner,
-                  { backgroundColor: "#FEE2E2" },
-                ]}>
-                <Ionicons name="nutrition" size={14} color="#EF4444" />
-              </View>
-            </View>
           </View>
-          <View style={styles.macroCard}>
+
+          {/* Carbs */}
+          <View style={[styles.macroCard, { backgroundColor: "#fff" }]}>
+            <View style={styles.macroTop}>
+              <CalorieRing
+                progress={carbsProgress}
+                size={44}
+                strokeWidth={5}
+                color="#e89e5d"
+                trackColor="#FFEDD5">
+                <MaterialCommunityIcons
+                  name="barley"
+                  size={14}
+                  color="#e89e5d"
+                />
+              </CalorieRing>
+            </View>
             <Text style={styles.macroVal}>{carbsLeft}g</Text>
             <Text style={styles.macroLbl}>Carbs left</Text>
-            <View
-              style={[
-                styles.macroIconBg,
-                { borderColor: "#FFEDD5", backgroundColor: "#fff" },
-              ]}>
-              <View
-                style={[
-                  styles.macroIconBgInner,
-                  { backgroundColor: "#FFEDD5" },
-                ]}>
-                <Ionicons name="pizza" size={14} color="#F97316" />
-              </View>
-            </View>
           </View>
-          <View style={styles.macroCard}>
+
+          {/* Fat */}
+          <View style={[styles.macroCard, { backgroundColor: "#fff" }]}>
+            <View style={styles.macroTop}>
+              <CalorieRing
+                progress={fatProgress}
+                size={44}
+                strokeWidth={5}
+                color="#5a8bed"
+                trackColor="#DBEAFE">
+                <MaterialCommunityIcons
+                  name="peanut"
+                  size={14}
+                  color="#5a8bed"
+                />
+              </CalorieRing>
+            </View>
             <Text style={styles.macroVal}>{fatLeft}g</Text>
             <Text style={styles.macroLbl}>Fat left</Text>
-            <View
-              style={[
-                styles.macroIconBg,
-                { borderColor: "#E0F2FE", backgroundColor: "#fff" },
-              ]}>
-              <View
-                style={[
-                  styles.macroIconBgInner,
-                  { backgroundColor: "#E0F2FE" },
-                ]}>
-                <Ionicons name="water" size={14} color="#0EA5E9" />
-              </View>
-            </View>
           </View>
         </View>
 
-        {/* Recently Eaten */}
-        <Text style={styles.sectionTitle}>Recently eaten</Text>
+        {/* ───── Micronutrients Card ───── */}
+        <View style={[styles.microCard, { backgroundColor: "#fff" }]}>
+          <Text style={styles.sectionTitle}>Micronutrients</Text>
+          <MicroProgressBar
+            current={totalFiber}
+            goal={goals.fiberGoal || 38}
+            color="#9b5de5"
+            label="Fiber"
+            unit="g"
+            icon={
+              <MaterialCommunityIcons
+                name="food-apple"
+                size={16}
+                color="#9b5de5"
+              />
+            }
+          />
+          <MicroProgressBar
+            current={totalSugar}
+            goal={goals.sugarGoal || 64}
+            color="#f15bb5"
+            label="Sugar"
+            unit="g"
+            icon={
+              <MaterialCommunityIcons
+                name="spoon-sugar"
+                size={16}
+                color="#f15bb5"
+              />
+            }
+          />
+          <MicroProgressBar
+            current={totalSodium}
+            goal={goals.sodiumGoal || 2300}
+            color="#F59E0B"
+            label="Sodium"
+            unit="mg"
+            icon={
+              <MaterialCommunityIcons name="shaker" size={16} color="#F59E0B" />
+            }
+          />
+        </View>
 
+        {/* ───── Recently Eaten ───── */}
+        <Text style={styles.recentTitle}>Recently eaten</Text>
+
+        {/* Analyzing Card */}
         {isAnalyzing && activeTab === "today" && (
-          <View style={styles.analyzingCard}>
+          <View style={[styles.analyzingCard, { backgroundColor: "#fff" }]}>
             <View style={styles.analyzingContent}>
               <View style={styles.analyzingImageContainer}>
                 {analyzingImage ? (
@@ -254,29 +371,32 @@ export default function FoodLogScreen() {
 
         {/* Render Entries */}
         {currentLog?.entries.map((entry) => (
-          <View key={entry.id} style={styles.entryCard}>
-            <View style={styles.entryImagePlaceholder}>
+          <Pressable
+            key={entry.id}
+            style={[styles.entryCard, { backgroundColor: "#fff" }]}
+            onPress={() =>
+              router.push({
+                pathname: "/scan-result",
+                params: { entryId: entry.id },
+              })
+            }>
+            <View style={styles.entryImageWrap}>
               {entry.imageUri ? (
                 <Image
                   source={{ uri: entry.imageUri }}
-                  style={{ width: 60, height: 60, borderRadius: 12 }}
+                  style={styles.entryImage}
                 />
               ) : (
-                <View
-                  style={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: 12,
-                    backgroundColor: "#F3F4F6",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                  <Ionicons name="restaurant" size={24} color="#9CA3AF" />
+                <View style={styles.entryImageFallback}>
+                  <Ionicons name="restaurant" size={22} color="#9CA3AF" />
                 </View>
               )}
             </View>
+
             <View style={styles.entryInfo}>
-              <Text style={styles.entryName}>{entry.name}</Text>
+              <Text style={styles.entryName} numberOfLines={1}>
+                {entry.name}
+              </Text>
               <Text style={styles.entryTime}>
                 {new Date(entry.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
@@ -284,171 +404,265 @@ export default function FoodLogScreen() {
                 })}
               </Text>
             </View>
+
             <View style={styles.entryRight}>
-              <Text style={styles.entryCal}>{entry.calories} kcal</Text>
+              <Text style={styles.entryCal}>{entry.calories}</Text>
+              <Text style={styles.entryCalLabel}>kcal</Text>
             </View>
-          </View>
+
+            {/* Mini macros pills */}
+            <View style={styles.entryPills}>
+              <View style={[styles.pill, { backgroundColor: "#FEE2E2" }]}>
+                <Text style={[styles.pillText, { color: "#e65c5c" }]}>
+                  P {entry.protein}g
+                </Text>
+              </View>
+              <View style={[styles.pill, { backgroundColor: "#FFEDD5" }]}>
+                <Text style={[styles.pillText, { color: "#e89e5d" }]}>
+                  C {entry.carbs}g
+                </Text>
+              </View>
+              <View style={[styles.pill, { backgroundColor: "#DBEAFE" }]}>
+                <Text style={[styles.pillText, { color: "#5a8bed" }]}>
+                  F {entry.fat}g
+                </Text>
+              </View>
+            </View>
+          </Pressable>
         ))}
 
         {!currentLog?.entries.length && !isAnalyzing ? (
-          <View style={{ alignItems: "center", marginTop: 40 }}>
-            <Text
-              style={{ color: "#9CA3AF", fontFamily: "Poppins_400Regular" }}>
-              No entries yet.
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons name="restaurant-outline" size={40} color="#D1D5DB" />
+            </View>
+            <Text style={styles.emptyTitle}>No entries yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Scan or log your first meal to get started
             </Text>
           </View>
         ) : null}
       </ScrollView>
-
-      {/* Floating Action Button */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.fab,
-          { transform: [{ scale: pressed ? 0.92 : 1 }] },
-        ]}
-        onPress={() => {
-          if (Platform.OS !== "web")
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          router.push("/scanner");
-        }}>
-        <View style={styles.fabGradient}>
-          <Ionicons name="add" size={28} color="#fff" />
-        </View>
-      </Pressable>
     </View>
   );
 }
 
+/* ───── Micronutrient progress bar styles ───── */
+const microStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 14,
+  },
+  iconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  barContent: {
+    flex: 1,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  label: {
+    fontSize: 13,
+    fontFamily: "Poppins_500Medium",
+    color: "#374151",
+  },
+  value: {
+    fontSize: 13,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1F2937",
+  },
+  goalText: {
+    fontFamily: "Poppins_400Regular",
+    color: "#9CA3AF",
+  },
+  trackBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#F3F4F6",
+    overflow: "hidden",
+  },
+  fillBar: {
+    height: "100%",
+    borderRadius: 3,
+  },
+});
+
+/* ───── Main styles ───── */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC", // Match background from image
+    backgroundColor: "#F8FAFC",
   },
   scrollContent: {
     paddingHorizontal: 20,
-    gap: 20,
+    gap: 16,
   },
+
+  /* Header */
   header: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 32,
     fontFamily: "Poppins_700Bold",
-    color: "#000",
+    color: "#1A1A1A",
+    letterSpacing: -0.5,
   },
+
+  /* Date tabs – pill style */
   dateTabs: {
     flexDirection: "row",
-    gap: 16,
+    gap: 10,
     marginBottom: 4,
   },
   dateTab: {
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 20,
     paddingVertical: 8,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.55)",
+  },
+  dateTabActive: {
+    backgroundColor: "#1A1A1A",
   },
   dateTabText: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Poppins_600SemiBold",
     color: "#6B7280",
   },
   dateTabActiveText: {
-    color: "#000",
+    color: "#fff",
   },
-  dateTabDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#000",
-    marginTop: 4,
-  },
-  caloriesCard: {
-    backgroundColor: "#fff",
-    borderRadius: 24,
+
+  /* Hero calorie card */
+  heroCard: {
+    borderRadius: 28,
     padding: 24,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
   },
-  caloriesTextContainer: {
+  heroLeft: {
     flex: 1,
   },
-  caloriesNumber: {
-    fontSize: 36,
+  heroNumber: {
+    fontSize: 42,
     fontFamily: "Poppins_700Bold",
-    color: "#000",
+    color: "#1A1A1A",
+    lineHeight: 48,
   },
-  caloriesLabel: {
-    fontSize: 14,
+  heroLabel: {
+    fontSize: 15,
     fontFamily: "Poppins_500Medium",
     color: "#6B7280",
-    marginTop: -4,
+    marginTop: -2,
   },
-  caloriesRingContainer: {
-    alignItems: "flex-end",
+  caloriesEaten: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 8,
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  caloriesEatenText: {
+    fontSize: 12,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+  },
+  heroRing: {
+    alignItems: "center",
     justifyContent: "center",
   },
+  heroRingPercent: {
+    fontSize: 14,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
+  },
+
+  /* Macros Row */
   macrosRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 10,
   },
   macroCard: {
     flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    padding: 16,
-    justifyContent: "center",
+    borderRadius: 22,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: "center",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  macroTop: {
+    marginBottom: 10,
   },
   macroVal: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "Poppins_700Bold",
-    color: "#000",
+    color: "#1A1A1A",
+    marginTop: 2,
   },
   macroLbl: {
     fontSize: 11,
     fontFamily: "Poppins_500Medium",
     color: "#6B7280",
-    marginBottom: 16,
+    marginTop: -1,
   },
-  macroIconBg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  macroIconBgInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
+
+  /* Micronutrients Card */
+  microCard: {
+    borderRadius: 22,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    elevation: 2,
   },
   sectionTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1A1A1A",
+  },
+
+  /* Recently Eaten */
+  recentTitle: {
     fontSize: 18,
     fontFamily: "Poppins_600SemiBold",
-    color: "#000",
-    marginTop: 8,
+    color: "#1A1A1A",
+    marginTop: 4,
   },
+
+  /* Analyzing */
   analyzingCard: {
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     elevation: 2,
   },
   analyzingContent: {
@@ -458,7 +672,7 @@ const styles = StyleSheet.create({
   analyzingImageContainer: {
     width: 80,
     height: 80,
-    borderRadius: 16,
+    borderRadius: 18,
     overflow: "hidden",
     position: "relative",
   },
@@ -487,7 +701,7 @@ const styles = StyleSheet.create({
   analyzingTitle: {
     fontSize: 14,
     fontFamily: "Poppins_600SemiBold",
-    color: "#000",
+    color: "#1A1A1A",
     marginBottom: 8,
   },
   skeletonBars: {
@@ -513,64 +727,111 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_400Regular",
     color: "#9CA3AF",
   },
+
+  /* Entry Cards */
   entryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 16,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
     elevation: 2,
   },
-  entryImagePlaceholder: {
-    marginRight: 12,
+  entryImageWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  entryImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+  },
+  entryImageFallback: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "#F3F4F6",
+    alignItems: "center",
+    justifyContent: "center",
   },
   entryInfo: {
-    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
   },
   entryName: {
     fontSize: 15,
     fontFamily: "Poppins_600SemiBold",
-    color: "#000",
+    color: "#1A1A1A",
+    flex: 1,
   },
   entryTime: {
     fontSize: 12,
     fontFamily: "Poppins_400Regular",
-    color: "#6B7280",
+    color: "#9CA3AF",
+    marginLeft: 8,
   },
   entryRight: {
+    position: "absolute",
+    right: 16,
+    top: 16,
     alignItems: "flex-end",
   },
   entryCal: {
-    fontSize: 14,
-    fontFamily: "Poppins_600SemiBold",
-    color: "#000",
+    fontSize: 18,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
   },
   entryCalLabel: {
     fontSize: 11,
     fontFamily: "Poppins_400Regular",
     color: "#9CA3AF",
+    marginTop: -2,
   },
-  fab: {
-    position: "absolute",
-    right: 24,
-    bottom: 90,
-    zIndex: 100,
+
+  /* Mini pills */
+  entryPills: {
+    flexDirection: "row",
+    gap: 6,
   },
-  fabGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#0F172A",
+  pill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  pillText: {
+    fontSize: 11,
+    fontFamily: "Poppins_600SemiBold",
+  },
+
+  /* Empty state */
+  emptyState: {
+    alignItems: "center",
+    marginTop: 40,
+    paddingHorizontal: 20,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 5,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#6B7280",
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    fontFamily: "Poppins_400Regular",
+    color: "#9CA3AF",
+    textAlign: "center",
   },
 });

@@ -52,7 +52,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 
   const tabWidth = width - 40;
   const tabHeight = 70;
-  const r = 24;
+  const r = 40;
   const hw = 90;
   const hh = 26;
   const cx = tabWidth / 2;
@@ -201,7 +201,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         <View style={{ flex: 1, flexDirection: "row" }}>
           {leftRoutes.map((route: any) => renderTab(route))}
         </View>
-        <View style={{ width: hw }} /> {/* Spacer for hole */}
+        <View style={{ width: hw }} />
         <View style={{ flex: 1, flexDirection: "row" }}>
           {rightRoutes.map((route: any) => renderTab(route))}
         </View>

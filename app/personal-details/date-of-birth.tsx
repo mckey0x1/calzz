@@ -65,7 +65,7 @@ export default function SetDateOfBirthScreen() {
   const [day, setDay] = useState(parseInt(currentDob[1]));
   const [year, setYear] = useState(parseInt(currentDob[2]));
 
-  const topInset = Platform.OS === "web" ? 20 : insets.top + 10;
+  const topInset = Platform.OS === "web" ? 40 : insets.top + 20;
   
   const handleBack = () => router.back();
   
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     backgroundColor: "#1A1A1A",
     borderRadius: 30,
-    paddingVertical: 16,
+    paddingVertical: 10,
     alignItems: "center",
   },
   saveBtnText: {

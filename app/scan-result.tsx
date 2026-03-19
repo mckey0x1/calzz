@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -6,41 +6,98 @@ import {
   ScrollView,
   Pressable,
   Platform,
-  Image,
   ImageBackground,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import {
+  Ionicons,
+  MaterialCommunityIcons,
+  FontAwesome5,
+} from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
 import { LinearGradient } from "expo-linear-gradient";
 
-const MOCK_SCAN = {
-  name: "Turkey Sandwich With Potato Chips",
-  calories: 460,
-  carbs: 45,
-  protein: 25,
-  fat: 20,
-  score: 7,
-  time: "2:10 PM",
-  image:
-    "https://images.unsplash.com/photo-1619096252214-ef06c45683e3?auto=format&fit=crop&q=80&w=1000",
-};
+
 
 export default function ScanResultScreen() {
   const colors = useThemeColors("light");
   const insets = useSafeAreaInsets();
-  const { addFoodEntry, scanResult } = useNutrition();
+  const { addFoodEntry, scanResult, todayLog, weekLogs, clearScanResult } =
+    useNutrition();
+  const { entryId } = useLocalSearchParams();
 
-  const currentScan = scanResult || MOCK_SCAN;
+  // 1. Look up existing entry if viewing history
+  const existingEntry = entryId
+    ? [...todayLog.entries, ...weekLogs.flatMap((l) => l.entries)].find(
+        (e) => e.id === entryId,
+      )
+    : null;
 
+  // 2. Determine initial data source (either old log or fresh scan)
+  const [localData, setLocalData] = useState<any>(() => {
+    if (existingEntry) {
+      return {
+        name: existingEntry.name,
+        calories: existingEntry.calories,
+        carbs: existingEntry.carbs,
+        protein: existingEntry.protein,
+        fat: existingEntry.fat,
+        score: existingEntry.confidence || 8,
+        time: new Date(existingEntry.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        image: existingEntry.imageUri || "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38",
+      };
+    }
+    return scanResult;
+  });
+
+  const currentScan = localData;
   const [quantity, setQuantity] = useState(1);
+  const isReadOnly = !!existingEntry;
+
+  useEffect(() => {
+    // If we're on a new scan and landed without data, grab what we can
+    if (!entryId && !localData && scanResult) {
+      setLocalData(scanResult);
+    }
+
+    return () => {
+      // Clear global scan result when leaving screen
+      clearScanResult();
+    };
+  }, []);
+
+  // Crash prevention: If for some reason we navigate here without any data, go back safely
+  if (!currentScan) {
+    return (
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+        <Text style={{ fontFamily: "Poppins_500Medium", color: "#6B7280" }}>No food data found.</Text>
+        <Pressable 
+          style={{ marginTop: 20, padding: 12, backgroundColor: "#1A1A1A", borderRadius: 12 }} 
+          onPress={() => router.back()}
+        >
+          <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold" }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   function handleSave() {
     if (Platform.OS !== "web")
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // If we're just viewing an existing entry, 'Done' just goes back
+    if (isReadOnly) {
+      clearScanResult();
+      router.back();
+      return;
+    }
+
     addFoodEntry({
       name: currentScan.name,
       calories: currentScan.calories * quantity,
@@ -51,15 +108,17 @@ export default function ScanResultScreen() {
       confidence: 95,
       imageUri: currentScan.image,
     });
-    // Let's assume going back returns to dashboard where it's saved.
-    router.replace("/(tabs)");
+    clearScanResult();
+    router.back()
   }
 
   function handleClose() {
-    router.back();
+    clearScanResult();
+    router.replace("/food-log");
   }
 
   function modifyQuantity(amount: number) {
+    if (isReadOnly) return;
     if (Platform.OS !== "web") Haptics.selectionAsync();
     setQuantity((prev) => Math.max(1, prev + amount));
   }
@@ -70,138 +129,163 @@ export default function ScanResultScreen() {
     value,
     color,
   }: {
-    icon: any;
+    icon: React.ReactNode;
     label: string;
     value: string;
     color: string;
   }) => (
     <View style={styles.macroCard}>
-      <View style={styles.macroCardContent}>
-        <View style={[styles.macroIconBg, { backgroundColor: color + "15" }]}>
-          {icon}
-        </View>
-        <View style={styles.macroTextCol}>
-          <Text style={styles.macroLabel}>{label}</Text>
-          <Text style={styles.macroValue}>{value}</Text>
-        </View>
+      <View style={[styles.macroIconBg, { backgroundColor: color + "15" }]}>
+        {icon}
       </View>
-      <Ionicons
-        name="pencil"
-        size={12}
-        color="#9CA3AF"
-        style={styles.editIcon}
-      />
+      <View style={styles.macroTextCol}>
+        <Text style={styles.macroValue}>{value}</Text>
+        <Text style={styles.macroLabel}>{label}</Text>
+      </View>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Background Image Header */}
+      {/* ──── Header Background Image ──── */}
       <ImageBackground
         source={{ uri: currentScan.image }}
         style={styles.imageBackground}
         resizeMode="cover">
         <LinearGradient
-          colors={["rgba(0,0,0,0.6)", "transparent", "transparent"]}
+          colors={["rgba(0,0,0,0.5)", "transparent", "transparent"]}
           style={StyleSheet.absoluteFill}
         />
         <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
           <Pressable style={styles.headerBtn} onPress={handleClose}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
+            <Ionicons name="close" size={24} color="#fff" />
           </Pressable>
           <Text style={styles.headerTitle}>Nutrition</Text>
-          <Pressable style={styles.headerBtn}>
-            <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
-          </Pressable>
+          <View style={styles.headerSpacer} />
         </View>
       </ImageBackground>
 
-      {/* Bottom Sheet Overlay */}
+      {/* ──── Sliding Bottom Sheet Area ──── */}
       <View style={styles.bottomSheetWrapper}>
-        <ScrollView
-          style={styles.bottomSheet}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
-          showsVerticalScrollIndicator={false}>
-          <Text style={styles.timeText}>{currentScan.time}</Text>
+        <View style={styles.bottomSheet}>
+          <View style={styles.sheetHandle} />
 
-          <View style={styles.titleRow}>
-            <Text style={styles.foodTitle}>{currentScan.name}</Text>
-            <View style={styles.quantityPicker}>
-              <Pressable
-                onPress={() => modifyQuantity(-1)}
-                style={styles.qtyBtn}>
-                <Ionicons name="remove" size={20} color={colors.text} />
-              </Pressable>
-              <Text style={styles.qtyText}>{quantity}</Text>
-              <Pressable
-                onPress={() => modifyQuantity(1)}
-                style={styles.qtyBtn}>
-                <Ionicons name="add" size={20} color={colors.text} />
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={styles.macrosGrid}>
-            <MacroCard
-              icon={<Ionicons name="flame" size={16} color="#000" />}
-              label="Calories"
-              value={String(currentScan.calories * quantity)}
-              color="#000000"
-            />
-            <MacroCard
-              icon={<Ionicons name="pizza" size={16} color="#E8A35A" />}
-              label="Carbs"
-              value={`${currentScan.carbs * quantity}g`}
-              color="#E8A35A"
-            />
-            <MacroCard
-              icon={<Ionicons name="fish" size={16} color="#EC7063" />}
-              label="Protein"
-              value={`${currentScan.protein * quantity}g`}
-              color="#EC7063"
-            />
-            <MacroCard
-              icon={<Ionicons name="water" size={16} color="#5DADE2" />}
-              label="Fat"
-              value={`${currentScan.fat * quantity}g`}
-              color="#5DADE2"
-            />
-          </View>
-
-          <View style={styles.healthScoreCard}>
-            <View style={styles.healthScoreHeader}>
-              <View
-                style={[
-                  styles.macroIconBg,
-                  { backgroundColor: "#D7BDE2" + "30" },
-                ]}>
-                <Ionicons name="heart" size={16} color="#A569BD" />
+          <ScrollView
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 100 },
+            ]}
+            showsVerticalScrollIndicator={false}>
+            {/* Header / Title Row */}
+            <View style={styles.titleSection}>
+              <View style={styles.titleInfo}>
+                <View style={styles.timeBadge}>
+                  <Ionicons name="time-outline" size={14} color="#6B7280" />
+                  <Text style={styles.timeText}>{currentScan.time}</Text>
+                </View>
+                <Text style={styles.foodTitle}>{currentScan.name}</Text>
               </View>
-              <Text style={styles.healthScoreLabel}>Health Score</Text>
-              <View style={{ flex: 1 }} />
-              <Text style={styles.healthScoreValue}>
-                {currentScan.score}/10
-              </Text>
+
+              {!isReadOnly && (
+                <View style={styles.quantityPicker}>
+                  <Pressable
+                    onPress={() => modifyQuantity(-1)}
+                    style={styles.qtyBtn}>
+                    <Ionicons name="remove" size={18} color="#1A1A1A" />
+                  </Pressable>
+                  <Text style={styles.qtyText}>{quantity}</Text>
+                  <Pressable
+                    onPress={() => modifyQuantity(1)}
+                    style={styles.qtyBtn}>
+                    <Ionicons name="add" size={18} color="#1A1A1A" />
+                  </Pressable>
+                </View>
+              )}
             </View>
-            <View style={styles.healthScoreBarBg}>
-              <View
-                style={[
-                  styles.healthScoreBarFill,
-                  { width: `${currentScan.score * 10}%` },
-                ]}
+
+            {/* Main Stats (Calories & Score) */}
+            <View style={styles.mainStatsRow}>
+              <View style={[styles.statBox, { backgroundColor: "#F8FAFC" }]}>
+                <View
+                  style={[styles.statIconWrap, { backgroundColor: "#1A1A1A" }]}>
+                  <Ionicons name="flame" size={16} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.statBoxValue}>
+                    {currentScan.calories * quantity}
+                  </Text>
+                  <Text style={styles.statBoxLabel}>Total Calories</Text>
+                </View>
+              </View>
+
+              <View style={[styles.statBox, { backgroundColor: "#F0FDF4" }]}>
+                <View
+                  style={[styles.statIconWrap, { backgroundColor: "#22C55E" }]}>
+                  <Ionicons name="leaf" size={16} color="#fff" />
+                </View>
+                <View>
+                  <Text style={styles.statBoxValue}>
+                    {currentScan.score}/10
+                  </Text>
+                  <Text style={styles.statBoxLabel}>Health Score</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Macros Section */}
+            <Text style={styles.sectionHeader}>Macronutrients</Text>
+            <View style={styles.macrosGrid}>
+              <MacroCard
+                icon={
+                  <FontAwesome5
+                    name="drumstick-bite"
+                    size={14}
+                    color="#e65c5c"
+                  />
+                }
+                label="Protein"
+                value={`${currentScan.protein * quantity}g`}
+                color="#e65c5c"
+              />
+              <MacroCard
+                icon={
+                  <MaterialCommunityIcons
+                    name="barley"
+                    size={18}
+                    color="#e89e5d"
+                  />
+                }
+                label="Carbs"
+                value={`${currentScan.carbs * quantity}g`}
+                color="#e89e5d"
+              />
+              <MacroCard
+                icon={
+                  <MaterialCommunityIcons
+                    name="peanut"
+                    size={18}
+                    color="#5a8bed"
+                  />
+                }
+                label="Fat"
+                value={`${currentScan.fat * quantity}g`}
+                color="#5a8bed"
               />
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
+        </View>
 
-        {/* Footer Actions */}
-        <View style={[styles.footer, { paddingBottom: insets.bottom + 20 }]}>
-          <Pressable style={styles.fixButton}>
-            <Ionicons name="color-wand" size={18} color={colors.text} />
-            <Text style={styles.fixButtonText}>Fix Results</Text>
-          </Pressable>
-          <Pressable style={styles.doneButton} onPress={handleSave}>
-            <Text style={styles.doneButtonText}>Done</Text>
+        {/* ──── Footer Actions ──── */}
+        <View style={[styles.footer, { paddingBottom: insets.bottom || 24 }]}>
+          {/* {!isReadOnly && (
+            <Pressable style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>Edit</Text>
+            </Pressable>
+          )} */}
+          <Pressable style={styles.primaryButton} onPress={handleSave}>
+            <Text style={styles.primaryButtonText}>
+              {isReadOnly ? "Done" : "Add to Log"}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -216,7 +300,8 @@ const styles = StyleSheet.create({
   },
   imageBackground: {
     width: "100%",
-    height: "55%", // Takes up top half
+    aspectRatio: 1,
+    zIndex: 1,
   },
   header: {
     flexDirection: "row",
@@ -229,7 +314,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(255,255,255,0.25)",
+    backgroundColor: "rgba(0,0,0,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -238,147 +323,180 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: "Poppins_600SemiBold",
   },
+  headerSpacer: {
+    width: 44,
+  },
   bottomSheetWrapper: {
-    flex: 1,
-    marginTop: -40, // overlap the image
+    position: "absolute",
+    top: "40%", // Start slightly above the bottom of the image to overlap
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2,
   },
   bottomSheet: {
     flex: 1,
     backgroundColor: "#fff",
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 2,
+    alignSelf: "center",
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 32,
+    paddingTop: 8,
   },
-  timeText: {
-    fontSize: 12,
-    fontFamily: "Poppins_500Medium",
-    color: "#6B7280",
-    marginBottom: 8,
-  },
-  titleRow: {
+  titleSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 32,
+    marginBottom: 24,
     gap: 16,
   },
-  foodTitle: {
+  titleInfo: {
     flex: 1,
-    fontSize: 22,
+  },
+  timeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: 6,
+    backgroundColor: "#F3F4F6",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  timeText: {
+    fontSize: 11,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+  },
+  foodTitle: {
+    fontSize: 20,
     fontFamily: "Poppins_700Bold",
-    color: "#111",
-    lineHeight: 30,
+    color: "#1A1A1A",
+    lineHeight: 32,
   },
   quantityPicker: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 4,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 100,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
+    borderColor: "#F1F5F9",
   },
   qtyBtn: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   qtyText: {
     fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
-    marginHorizontal: 8,
-    minWidth: 16,
+    color: "#1A1A1A",
+    width: 32,
     textAlign: "center",
+  },
+  mainStatsRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 28,
+  },
+  statBox: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  statIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  statBoxValue: {
+    fontSize: 20,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
+    lineHeight: 24,
+  },
+  statBoxLabel: {
+    fontSize: 8,
+    fontFamily: "Poppins_500Medium",
+    color: "#6B7280",
+  },
+  sectionHeader: {
+    fontSize: 18,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1A1A1A",
+    marginBottom: 16,
   },
   macrosGrid: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 16,
   },
   macroCard: {
-    width: "48%",
+    flex: 1,
+    alignItems: "center",
     backgroundColor: "#fff",
     borderRadius: 20,
-    padding: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: "#F1F5F9",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.02,
     shadowRadius: 8,
-    elevation: 2,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  macroCardContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
+    elevation: 1,
   },
   macroIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 12,
   },
   macroTextCol: {
-    justifyContent: "center",
+    alignItems: "center",
+  },
+  macroValue: {
+    fontSize: 18,
+    fontFamily: "Poppins_700Bold",
+    color: "#1A1A1A",
+    marginBottom: 2,
   },
   macroLabel: {
     fontSize: 12,
     fontFamily: "Poppins_500Medium",
     color: "#6B7280",
-    marginBottom: 2,
-  },
-  macroValue: {
-    fontSize: 14,
-    fontFamily: "Poppins_700Bold",
-    color: "#111",
-  },
-  editIcon: {
-    alignSelf: "flex-end",
-    marginBottom: 4,
-  },
-  healthScoreCard: {
-    backgroundColor: "#F9FAFB",
-    borderRadius: 20,
-    padding: 16,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: "#F3F4F6",
-  },
-  healthScoreHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 12,
-  },
-  healthScoreLabel: {
-    fontSize: 14,
-    fontFamily: "Poppins_500Medium",
-    color: "#111",
-  },
-  healthScoreValue: {
-    fontSize: 14,
-    fontFamily: "Poppins_700Bold",
-    color: "#111",
-  },
-  healthScoreBarBg: {
-    height: 6,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  healthScoreBarFill: {
-    height: "100%",
-    backgroundColor: "#9ac255", // Using the tint green
-    borderRadius: 3,
   },
   footer: {
     position: "absolute",
@@ -386,40 +504,42 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "rgba(255,255,255,0.9)",
     paddingHorizontal: 24,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-    gap: 16,
+    borderTopColor: "rgba(243,244,246,0.8)",
+    gap: 12,
   },
-  fixButton: {
-    flex: 1,
-    flexDirection: "row",
+  secondaryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 100,
+    backgroundColor: "#F3F4F6",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    gap: 8,
   },
-  fixButtonText: {
+  secondaryButtonText: {
     fontSize: 16,
     fontFamily: "Poppins_600SemiBold",
-    color: "#111",
+    color: "#1A1A1A",
   },
-  doneButton: {
+  primaryButton: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderRadius: 100,
-    backgroundColor: "#111",
+    backgroundColor: "#1A1A1A",
+    shadowColor: "#1A1A1A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  doneButtonText: {
+  primaryButtonText: {
     fontSize: 16,
-    fontFamily: "Poppins_700Bold",
+    fontFamily: "Poppins_600SemiBold",
     color: "#fff",
   },
 });

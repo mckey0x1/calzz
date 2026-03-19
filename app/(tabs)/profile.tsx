@@ -142,13 +142,13 @@ export default function ProfileScreen() {
       id: "macros",
       title: "Adjust macronutrients",
       icon: "sync-outline",
-      onPress: () => {},
+      onPress: () => router.push("/edit-nutrition-goals"),
     },
     {
       id: "weight",
       title: "Goal & current weight",
       icon: "flag-outline",
-      onPress: () => {},
+      onPress: () => router.push("/personal-details" as any),
     },
   ];
 
@@ -211,8 +211,7 @@ export default function ProfileScreen() {
         <Text style={[styles.mainTitle, { color: colors.text }]}>Profile</Text>
 
         {/* Profile Info Card */}
-        <View
-          style={[styles.card, { backgroundColor: colors.surfaceElevated }]}>
+        <View style={[styles.card, { backgroundColor: "#fff" }]}>
           <View style={styles.profileRow}>
             {user?.photoURL ? (
               <Image
@@ -238,7 +237,7 @@ export default function ProfileScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: colors.surfaceElevated,
+              backgroundColor: "#fff",
               paddingVertical: 10,
               paddingHorizontal: 0,
             },
@@ -435,7 +434,7 @@ export default function ProfileScreen() {
           style={[
             styles.card,
             {
-              backgroundColor: colors.surfaceElevated,
+              backgroundColor: "#fff",
               paddingVertical: 10,
               paddingHorizontal: 0,
               marginTop: 10,

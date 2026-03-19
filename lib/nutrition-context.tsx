@@ -25,6 +25,9 @@ export interface FoodEntry {
   protein: number;
   carbs: number;
   fat: number;
+  fiber?: number;
+  sugar?: number;
+  sodium?: number;
   meal: "breakfast" | "lunch" | "dinner" | "snack";
   timestamp: number;
   imageUri?: string;
@@ -53,6 +56,9 @@ export interface UserGoals {
   heightIn?: number;
   dateOfBirth?: string;
   gender?: string;
+  fiberGoal?: number;
+  sugarGoal?: number;
+  sodiumGoal?: number;
 }
 
 interface NutritionContextValue {
@@ -77,6 +83,7 @@ interface NutritionContextValue {
   scanResult: any | null;
   analyzingPercent: number;
   analyzeFood: (base64Image: string, uri: string) => Promise<void>;
+  clearScanResult: () => void;
 }
 
 const NutritionContext = createContext<NutritionContextValue | null>(null);
@@ -95,6 +102,9 @@ const DEFAULT_GOALS: UserGoals = {
   heightIn: 6,
   dateOfBirth: "01/01/2001",
   gender: "Male",
+  fiberGoal: 38,
+  sugarGoal: 64,
+  sodiumGoal: 2300,
 };
 
 function getDateKey(date: Date = new Date()): string {
@@ -115,48 +125,7 @@ function createEmptyLog(date: string): DailyLog {
   };
 }
 
-const SAMPLE_ENTRIES: Omit<FoodEntry, "id" | "timestamp">[] = [
-  {
-    name: "Greek Yogurt Bowl",
-    calories: 280,
-    protein: 22,
-    carbs: 30,
-    fat: 8,
-    meal: "breakfast",
-  },
-  {
-    name: "Avocado Toast",
-    calories: 350,
-    protein: 12,
-    carbs: 35,
-    fat: 18,
-    meal: "breakfast",
-  },
-  {
-    name: "Grilled Chicken Salad",
-    calories: 420,
-    protein: 38,
-    carbs: 15,
-    fat: 22,
-    meal: "lunch",
-  },
-  {
-    name: "Quinoa Bowl",
-    calories: 380,
-    protein: 14,
-    carbs: 52,
-    fat: 12,
-    meal: "lunch",
-  },
-  {
-    name: "Salmon & Rice",
-    calories: 520,
-    protein: 35,
-    carbs: 45,
-    fat: 18,
-    meal: "dinner",
-  },
-];
+
 
 export function NutritionProvider({ children }: { children: ReactNode }) {
   const [todayLog, setTodayLog] = useState<DailyLog>(
@@ -188,16 +157,6 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         setTodayLog(JSON.parse(todayData));
       } else {
         const initialLog = createEmptyLog(getDateKey());
-        const sampleCount = Math.floor(Math.random() * 3) + 2;
-        for (let i = 0; i < sampleCount; i++) {
-          const sample = SAMPLE_ENTRIES[i];
-          initialLog.entries.push({
-            ...sample,
-            id: generateId(),
-            timestamp: Date.now() - (sampleCount - i) * 3600000,
-          });
-        }
-        initialLog.waterGlasses = Math.floor(Math.random() * 4) + 2;
         setTodayLog(initialLog);
       }
 
@@ -209,20 +168,6 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const log = createEmptyLog(getDateKey(d));
-          const entryCount = Math.floor(Math.random() * 3) + 2;
-          for (let j = 0; j < entryCount; j++) {
-            const sample =
-              SAMPLE_ENTRIES[Math.floor(Math.random() * SAMPLE_ENTRIES.length)];
-            log.entries.push({
-              ...sample,
-              id: generateId(),
-              timestamp: d.getTime() + j * 3600000,
-              calories: sample.calories + Math.floor(Math.random() * 100 - 50),
-            });
-          }
-          log.waterGlasses = Math.floor(Math.random() * 6) + 3;
-          log.steps = Math.floor(Math.random() * 6000 + 4000);
-          log.weight = 80 - i * 0.15 + Math.random() * 0.5;
           logs.push(log);
         }
         setWeekLogs(logs);
@@ -351,6 +296,10 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  function clearScanResult() {
+    setScanResult(null);
+  }
+
   const totalCalories = useMemo(
     () => todayLog.entries.reduce((sum, e) => sum + e.calories, 0),
     [todayLog.entries],
@@ -391,6 +340,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       scanResult,
       analyzingPercent,
       analyzeFood,
+      clearScanResult,
     }),
     [
       todayLog,
