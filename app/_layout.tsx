@@ -58,6 +58,10 @@ function RootLayoutNav() {
           name="edit-nutrition-goals"
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
+        <Stack.Screen
+          name="streak"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
     </>
   );

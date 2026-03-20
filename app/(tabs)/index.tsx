@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,7 @@ import {
   Pressable,
   useColorScheme,
   Platform,
+  Dimensions,
   Image,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,11 +17,11 @@ import {
   MaterialCommunityIcons,
   FontAwesome5,
 } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
-import { useAuth } from "@/lib/auth-context";
 import { useNutrition } from "@/lib/nutrition-context";
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 // Simple Progress Ring component for inline usage
 function ProgressRing({
@@ -83,277 +84,267 @@ export default function DashboardScreen() {
     scanResult,
   } = useNutrition();
 
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeSlide, setActiveSlide] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
   useEffect(() => {
     if (!isAnalyzing && scanResult) {
       router.push("/scan-result");
     }
   }, [isAnalyzing, scanResult]);
 
-  const progress = Math.min(
-    (totalCalories || 0) / (goals.dailyCalories || 2500),
-    1,
-  );
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  // Mock days for the date strip
-  const days = [
-    { day: "Sun", date: "10", state: "past" },
-    { day: "Mon", date: "11", state: "past" },
-    { day: "Tue", date: "12", state: "completed" },
-    { day: "Wed", date: "13", state: "active" },
-    { day: "Thu", date: "14", state: "future" },
-    { day: "Fri", date: "15", state: "future" },
-    { day: "Sat", date: "16", state: "future" },
-  ];
+  // Generate last 30 days
+  const getDays = () => {
+    const dates = [];
+    for (let i = 30; i >= -5; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      dates.push(d);
+    }
+    return dates;
+  };
+
+  const dates = getDays();
+
+  const handleScroll = (event: any) => {
+    const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+    setActiveSlide(slide);
+  };
+
+  const caloriesLeft = Math.max((goals.dailyCalories || 2500) - (totalCalories || 0), 0);
+  const calorieProgress = Math.min((totalCalories || 0) / (goals.dailyCalories || 2500), 1);
 
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={["#fefaf7", "#fcfcfd", "#f8f9fa"]}
-        locations={[0, 0.2, 1]}
+        colors={["#fefaf7", "#fcfcfd", "#f8f9fa"]} 
         style={StyleSheet.absoluteFill}
       />
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 20,
-            paddingBottom: Platform.OS === "web" ? 34 + 84 : 120,
+            paddingTop: (Platform.OS === "web" ? webTopInset : insets.top) + 10,
+            paddingBottom: 120,
           },
         ]}
         showsVerticalScrollIndicator={false}>
+        
+        {/* Header Row */}
         <View style={styles.headerRow}>
           <View style={styles.logoAndTitle}>
-            <Ionicons name="logo-apple" size={24} color="#111" />
-            <Text style={styles.appTitle}>Calzz</Text>
+            <Ionicons name="logo-apple" size={28} color="#111" />
+            <Text style={styles.appTitle}>Cal AI</Text>
           </View>
           <View style={styles.streakPill}>
-            <Ionicons name="flame" size={16} color="#FF9F1C" />
-            <Text style={styles.streakCount}>15</Text>
+            <Text style={styles.streakCount}>🔥 0</Text>
           </View>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.dateStrip}>
-          {days.map((d, index) => {
-            let circleStyle = styles.dateCirclePast;
-            let textStyle = styles.dateTextPast;
-            let dayTextStyle = styles.dayTextPast;
-            let wrapperStyle = styles.dateItemWrapper;
+        {/* Date Selector */}
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.dateSelector}>
+            {dates.map((date, idx) => {
+              const isSelected = date.toDateString() === selectedDate.toDateString();
+              const isFuture = date > new Date();
+              const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+              const dayNum = date.getDate();
 
-            if (d.state === "completed") {
-              circleStyle = styles.dateCircleCompleted;
-              textStyle = styles.dateTextCompleted;
-              dayTextStyle = styles.dayTextCompleted;
-            } else if (d.state === "active") {
-              circleStyle = styles.dateCircleActive;
-              textStyle = styles.dateTextActive;
-              dayTextStyle = styles.dayTextActive;
-              wrapperStyle = [
-                styles.dateItemWrapper,
-                styles.dateItemWrapperActive,
-              ];
-            } else if (d.state === "future") {
-              circleStyle = styles.dateCircleFuture;
-              textStyle = styles.dateTextFuture;
-              dayTextStyle = styles.dayTextFuture;
-            }
+              return (
+                <Pressable
+                  key={idx}
+                  onPress={() => setSelectedDate(date)}
+                  style={[styles.dateItem, isSelected && styles.dateItemActive]}>
+                  <Text style={[
+                     styles.dayName, 
+                     isSelected && styles.dayNameActive, 
+                     isFuture && !isSelected && { opacity: 0.3 }
+                  ]}>
+                    {dayName}
+                  </Text>
+                  <View style={[
+                    styles.dateCircle, 
+                    isSelected ? styles.dateCircleActive : styles.dateCircleDashed,
+                    isFuture && !isSelected && { opacity: 0.3 }
+                  ]}>
+                    <Text style={[styles.dateNum, isSelected && styles.dateNumActive]}>{dayNum}</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
-            return (
-              <View key={index} style={wrapperStyle}>
-                <Text style={dayTextStyle}>{d.day}</Text>
-                <View style={[styles.dateCircle, circleStyle]}>
-                  <Text style={textStyle}>{d.date}</Text>
-                </View>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        <View style={styles.mainCalorieCard}>
-          <View style={styles.calorieTextContainer}>
-            <View style={styles.calorieValues}>
-              <Text style={styles.calorieEaten}>{totalCalories || 1250}</Text>
-              <Text style={styles.calorieGoal}>
-                /{goals.dailyCalories || 2500}
-              </Text>
-            </View>
-            <Text style={styles.calorieSubtitle}>Calories eaten</Text>
+        {/* Main Calorie Card */}
+        <View style={styles.mainCard}>
+          <View style={styles.calorieInfo}>
+            <Text style={styles.calorieLeftValue}>{Math.round(caloriesLeft)}</Text>
+            <Text style={styles.calorieLeftLabel}>Calories <Text style={styles.boldText}>left</Text></Text>
           </View>
-          <View style={styles.calorieRingContainer}>
+          <View style={styles.ringWrapper}>
             <ProgressRing
-              size={120}
-              progress={totalCalories / goals.dailyCalories || 0.5}
-              color="#1a1a1c"
+              size={110}
+              progress={calorieProgress}
+              color="#111"
               trackColor="#f0f0f4"
-              strokeWidth={12}>
+              strokeWidth={14}>
               <View style={styles.ringCenter}>
-                <Ionicons name="flame" size={28} color="#1a1a1c" />
+                <Ionicons name="flame" size={32} color="#111" />
               </View>
             </ProgressRing>
           </View>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.macrosScroll}>
-          <View style={styles.macroCard}>
-            <View style={styles.macroTextHeader}>
-              <Text style={styles.macroVal}>{totalProtein || 75}</Text>
-              <Text style={styles.macroGoal}>/{goals.proteinGoal || 150}g</Text>
+        {/* Macros & Health Score Carousel */}
+        <View>
+          <ScrollView
+            ref={scrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            style={styles.carouselContainer}>
+            
+            <View style={styles.slide}>
+              <View style={styles.macroRow}>
+                <MacroSmallCard 
+                  value={`${goals.proteinGoal - totalProtein}g`} 
+                  label="Protein left" 
+                  icon="drumstick-bite" 
+                  color="#e65c5c" 
+                  progress={totalProtein / goals.proteinGoal}
+                />
+                <MacroSmallCard 
+                  value={`${goals.carbsGoal - totalCarbs}g`} 
+                  label="Carbs left" 
+                  icon="wheat" 
+                  color="#e89e5d" 
+                  progress={totalCarbs / goals.carbsGoal}
+                />
+                <MacroSmallCard 
+                  value={`${goals.fatGoal - totalFat}g`} 
+                  label="Fats left" 
+                  icon="avocado" 
+                  color="#5a8bed" 
+                  progress={totalFat / goals.fatGoal}
+                />
+              </View>
             </View>
-            <Text style={styles.macroLabel}>Protein eaten</Text>
-            <View style={styles.macroRingWrapper}>
-              <ProgressRing
-                size={64}
-                progress={(totalProtein || 75) / (goals.proteinGoal || 150)}
-                color="#e65c5c"
-                trackColor="#f5f5f5"
-                strokeWidth={5}>
-                <View style={styles.macroIconCenter}>
-                  <FontAwesome5
-                    name="drumstick-bite"
-                    size={20}
-                    color="#e65c5c"
-                  />
-                </View>
-              </ProgressRing>
-            </View>
-          </View>
 
-          <View style={styles.macroCard}>
-            <View style={styles.macroTextHeader}>
-              <Text style={styles.macroVal}>{totalCarbs || 138}</Text>
-              <Text style={styles.macroGoal}>/{goals.carbsGoal || 275}g</Text>
+            <View style={styles.slide}>
+              <View style={styles.macroRow}>
+                <MacroSmallCard 
+                  value="38g" 
+                  label="Fiber left" 
+                  icon="leaf" 
+                  color="#81c784" 
+                  progress={0.2}
+                />
+                <MacroSmallCard 
+                  value="64g" 
+                  label="Sugar left" 
+                  icon="spoon" 
+                  color="#f06292" 
+                  progress={0.5}
+                />
+                <MacroSmallCard 
+                  value="2300mg" 
+                  label="Sodium left" 
+                  icon="shaker" 
+                  color="#ba68c8" 
+                  progress={0.1}
+                />
+              </View>
             </View>
-            <Text style={styles.macroLabel}>Carbs eaten</Text>
-            <View style={styles.macroRingWrapper}>
-              <ProgressRing
-                size={64}
-                progress={(totalCarbs || 138) / (goals.carbsGoal || 275)}
-                color="#e89e5d"
-                trackColor="#f5f5f5"
-                strokeWidth={5}>
-                <View style={styles.macroIconCenter}>
-                  <MaterialCommunityIcons
-                    name="barley"
-                    size={24}
-                    color="#e89e5d"
-                  />
-                </View>
-              </ProgressRing>
-            </View>
-          </View>
 
-          <View style={styles.macroCard}>
-            <View style={styles.macroTextHeader}>
-              <Text style={styles.macroVal}>{totalFat || 35}</Text>
-              <Text style={styles.macroGoal}>/{goals.fatGoal || 70}g</Text>
-            </View>
-            <Text style={styles.macroLabel}>Fat eaten</Text>
-            <View style={styles.macroRingWrapper}>
-              <ProgressRing
-                size={64}
-                progress={(totalFat || 35) / (goals.fatGoal || 70)}
-                color="#5a8bed"
-                trackColor="#f5f5f5"
-                strokeWidth={5}>
-                <View style={styles.macroIconCenter}>
-                  <MaterialCommunityIcons
-                    name="peanut"
-                    size={22}
-                    color="#5a8bed"
-                  />
+            <View style={styles.slide}>
+              <View style={styles.healthScoreCard}>
+                <View style={styles.healthHeader}>
+                  <Text style={styles.healthTitle}>Health score</Text>
+                  <Text style={styles.healthValue}>0/10</Text>
                 </View>
-              </ProgressRing>
+                <View style={styles.healthBarTrack}>
+                  <View style={[styles.healthBarFill, { width: '0%' }]} />
+                </View>
+                <Text style={styles.healthFeedback}>
+                  Carbs and fat are on track. You're low in calories and protein, which can slow weight loss and impact muscle retention.
+                </Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
 
-        <View style={styles.paginationDots}>
-          <View style={[styles.dot, styles.dotActive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
-          <View style={[styles.dot, styles.dotInactive]} />
+          <View style={styles.paginationDots}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={[styles.dot, activeSlide === i ? styles.dotActive : styles.dotInactive]} />
+            ))}
+          </View>
         </View>
 
-        {/* Recently Uploaded Section */}
+        {/* Recently uploaded */}
         <View style={styles.recentSection}>
           <Text style={styles.sectionTitle}>Recently uploaded</Text>
-
-          <Pressable
-            style={styles.recentCard}
-            onPress={() => router.push("/food-log")}>
-            <Image
-              source={{
-                uri: "https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=600&auto=format&fit=crop",
-              }}
-              style={styles.recentImage}
-            />
-            <View style={styles.recentDetails}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.recentTitle}>Grilled Salmon</Text>
-                <Text style={styles.recentTime}>12:37pm</Text>
-              </View>
-
-              <View style={styles.recentStats}>
-                <Ionicons name="flame" size={14} color="#111" />
-                <Text style={styles.recentCalories}>550 Calories</Text>
-              </View>
-
-              <View style={styles.recentMacrosRow}>
-                <View style={styles.recentMacroItem}>
-                  <FontAwesome5
-                    name="drumstick-bite"
-                    size={10}
-                    color="#e65c5c"
-                  />
-                  <Text style={styles.recentMacroText}>35g</Text>
-                </View>
-                <View style={styles.recentMacroItem}>
-                  <MaterialCommunityIcons
-                    name="barley"
-                    size={12}
-                    color="#e89e5d"
-                  />
-                  <Text style={styles.recentMacroText}>40g</Text>
-                </View>
-                <View style={styles.recentMacroItem}>
-                  <Ionicons name="water" size={12} color="#5a8bed" />
-                  <Text style={styles.recentMacroText}>28g</Text>
-                </View>
-              </View>
+          <View style={styles.recentItem}>
+            <View style={styles.recentImagePlaceholder}>
+               <Image 
+                source={{ uri: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=200&auto=format&fit=crop" }} 
+                style={styles.recentImage} 
+               />
             </View>
-          </Pressable>
-
-          <View style={[styles.recentCard, { opacity: 0.5, marginBottom: 0 }]}>
-            <View
-              style={[styles.recentImage, { backgroundColor: "#e0e0e0" }]}
-            />
-            <View style={styles.recentDetails}>
-              <View style={styles.recentHeader}>
-                <Text style={styles.recentTitle}>Avocado Toast</Text>
-                <Text style={styles.recentTime}>9:45am</Text>
-              </View>
+            <View style={styles.recentTextContainer}>
+              <View style={styles.placeholderLineLarge} />
+              <View style={styles.placeholderLineSmall} />
             </View>
           </View>
         </View>
+
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: { paddingHorizontal: 0, gap: 20 },
+function MacroSmallCard({ value, label, icon, color, progress }: any) {
+  return (
+    <View style={styles.macroCard}>
+      <Text style={styles.macroValueText}>{value}</Text>
+      <Text style={styles.macroLabelText}>{label.split(' ')[0]} <Text style={styles.lightText}>left</Text></Text>
+      <View style={styles.macroRingWrapper}>
+        <ProgressRing
+          size={56}
+          progress={Math.min(progress, 1)}
+          color={color}
+          trackColor="#f0f0f4"
+          strokeWidth={6}>
+          <View style={styles.macroIconCenter}>
+            {icon === "drumstick-bite" && <FontAwesome5 name="drumstick-bite" size={18} color={color} />}
+            {icon === "wheat" && <MaterialCommunityIcons name="barley" size={22} color={color} />}
+            {icon === "avocado" && <MaterialCommunityIcons name="peanut" size={22} color={color} />}
+            {icon === "leaf" && <Ionicons name="leaf" size={18} color={color} />}
+            {icon === "spoon" && <MaterialCommunityIcons name="spoon-sugar" size={22} color={color} />}
+            {icon === "shaker" && <MaterialCommunityIcons name="shaker-outline" size={22} color={color} />}
+          </View>
+        </ProgressRing>
+      </View>
+    </View>
+  );
+}
 
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#fcfcff" },
+  scrollContent: { paddingHorizontal: 0, gap: 24 },
+  
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
+    marginBottom: 8,
   },
   logoAndTitle: {
     flexDirection: "row",
@@ -361,19 +352,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   appTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: "700",
     color: "#111",
-    letterSpacing: -0.5,
   },
   streakPill: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: "#fff",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    gap: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -381,119 +368,99 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   streakCount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "700",
     color: "#111",
   },
 
-  dateStrip: {
+  dateSelector: {
     paddingHorizontal: 20,
     paddingVertical: 10,
-    gap: 8,
-    alignItems: "flex-end", // Align circles at bottom if needed
+    gap: 16,
   },
-  dateItemWrapper: {
+  dateItem: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    width: 62,
+    height: 100,
     borderRadius: 24,
   },
-  dateItemWrapperActive: {
-    backgroundColor: "#f7f7f9",
+  dateItemActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  dayTextPast: {
-    fontSize: 13,
+  dayName: {
+    fontSize: 14,
     fontWeight: "600",
-    color: "#b0b0b0",
-    marginBottom: 8,
-  },
-  dayTextCompleted: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#a5d89b",
-    marginBottom: 8,
-  },
-  dayTextActive: {
-    fontSize: 13,
-    fontWeight: "700",
     color: "#111",
     marginBottom: 8,
   },
-  dayTextFuture: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#ccc",
-    marginBottom: 8,
+  dayNameActive: {
+    color: "#888",
+    fontWeight: "500",
   },
-
   dateCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1.5,
   },
-  dateCirclePast: { borderColor: "#d8d8d8", borderStyle: "dashed" },
-  dateCircleCompleted: { borderColor: "#2fb344", borderStyle: "solid" },
   dateCircleActive: {
-    borderColor: "#111",
-    borderStyle: "solid",
     borderWidth: 2,
+    borderColor: "#444",
   },
-  dateCircleFuture: {
-    borderColor: "#eee",
-    borderStyle: "solid",
-    backgroundColor: "#f9f9fb",
+  dateCircleDashed: {
+    borderWidth: 2,
+    borderColor: "#999",
+    borderStyle: "dashed",
+  },
+  dateNum: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#111",
+  },
+  dateNumActive: {
+    color: "#111",
   },
 
-  dateTextPast: { fontSize: 16, fontWeight: "600", color: "#b0b0b0" },
-  dateTextCompleted: { fontSize: 16, fontWeight: "600", color: "#111" },
-  dateTextActive: { fontSize: 16, fontWeight: "700", color: "#111" },
-  dateTextFuture: { fontSize: 16, fontWeight: "600", color: "#ccc" },
-
-  mainCalorieCard: {
+  mainCard: {
     backgroundColor: "#fff",
     marginHorizontal: 20,
-    borderRadius: 24,
+    borderRadius: 28,
     padding: 24,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 8,
-    marginTop: 10,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 4,
   },
-  calorieTextContainer: {
+  calorieInfo: {
     flex: 1,
   },
-  calorieValues: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 2,
-  },
-  calorieEaten: {
-    fontSize: 48,
+  calorieLeftValue: {
+    fontSize: 52,
     fontWeight: "800",
     color: "#111",
     letterSpacing: -1,
   },
-  calorieGoal: {
+  calorieLeftLabel: {
     fontSize: 18,
+    color: "#111",
     fontWeight: "500",
-    color: "#999",
+    marginTop: -4,
   },
-  calorieSubtitle: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#888",
-    marginTop: 4,
+  boldText: {
+    fontWeight: "800",
   },
-  calorieRingContainer: {
+  ringWrapper: {
     alignItems: "center",
     justifyContent: "center",
   },
@@ -503,44 +470,46 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  macrosScroll: {
+  carouselContainer: {
+    width: SCREEN_WIDTH,
+  },
+  slide: {
+    width: SCREEN_WIDTH,
     paddingHorizontal: 20,
+  },
+  macroRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     gap: 12,
   },
   macroCard: {
-    width: 140,
+    flex: 1,
     backgroundColor: "#fff",
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: "#f8f8f8",
+    borderColor: "#f8f8fa",
   },
-  macroTextHeader: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 2,
-  },
-  macroVal: {
-    fontSize: 18,
-    fontWeight: "700",
+  macroValueText: {
+    fontSize: 19,
+    fontWeight: "800",
     color: "#111",
   },
-  macroGoal: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#aaa",
-  },
-  macroLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#aaa",
+  macroLabelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#111",
     marginTop: 2,
     marginBottom: 16,
+  },
+  lightText: {
+    fontWeight: "400",
+    color: "#888",
   },
   macroRingWrapper: {
     alignItems: "center",
@@ -551,94 +520,118 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  healthScoreCard: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  healthHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  healthTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#111",
+  },
+  healthValue: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#111",
+  },
+  healthBarTrack: {
+    height: 6,
+    backgroundColor: "#f0f0f4",
+    borderRadius: 3,
+    marginBottom: 16,
+  },
+  healthBarFill: {
+    height: "100%",
+    backgroundColor: "#111",
+    borderRadius: 3,
+  },
+  healthFeedback: {
+    fontSize: 14,
+    color: "#777",
+    lineHeight: 22,
+    fontWeight: "400",
+  },
+
   paginationDots: {
     flexDirection: "row",
     justifyContent: "center",
-    gap: 6,
-    marginTop: -4,
+    gap: 8,
+    marginTop: 16,
   },
   dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   dotActive: {
     backgroundColor: "#111",
   },
   dotInactive: {
-    backgroundColor: "#eee",
-    borderWidth: 1,
-    borderColor: "#e0e0e0",
+    backgroundColor: "#e0e0e0",
   },
 
   recentSection: {
-    marginTop: 10,
+    marginTop: 8,
     paddingHorizontal: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 22,
+    fontWeight: "800",
     color: "#111",
-    marginBottom: 16,
+    marginBottom: 20,
   },
-  recentCard: {
-    flexDirection: "row",
-    backgroundColor: "#fcfcff",
-    borderRadius: 20,
+  recentItem: {
+    backgroundColor: "#fff",
+    borderRadius: 24,
     padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
-    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: "#f0f0f4",
+    borderColor: "#f8f8fa",
+  },
+  recentImagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: "#f5f5f7",
+    overflow: "hidden",
   },
   recentImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 16,
+    width: "100%",
+    height: "100%",
   },
-  recentDetails: {
+  recentTextContainer: {
     flex: 1,
-    justifyContent: "center",
+    gap: 8,
   },
-  recentHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
+  placeholderLineLarge: {
+    width: "80%",
+    height: 12,
+    backgroundColor: "#f0f0f4",
+    borderRadius: 6,
   },
-  recentTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#222",
-  },
-  recentTime: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#999",
-  },
-  recentStats: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 8,
-  },
-  recentCalories: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#333",
-  },
-  recentMacrosRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  recentMacroItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  recentMacroText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#888",
+  placeholderLineSmall: {
+    width: "60%",
+    height: 10,
+    backgroundColor: "#f0f0f4",
+    borderRadius: 5,
   },
 });
