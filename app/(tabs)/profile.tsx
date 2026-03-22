@@ -227,7 +227,20 @@ export default function ProfileScreen() {
               <Text style={styles.profileName}>
                 {user?.displayName || "user"}
               </Text>
-              <Text style={styles.profileAge}>25 years old</Text>
+              <Text style={styles.profileAge}>
+                {(() => {
+                  if (!goals.dateOfBirth) return 25;
+                  const parts = goals.dateOfBirth.split("/");
+                  if (parts.length === 3) {
+                    const birthYear = parseInt(parts[2], 10);
+                    if (!isNaN(birthYear)) {
+                      return new Date().getFullYear() - birthYear;
+                    }
+                  }
+                  return 25;
+                })()}{" "}
+                years old
+              </Text>
             </View>
           </View>
         </View>

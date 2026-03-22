@@ -7,8 +7,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
-import { NutritionProvider } from "@/lib/nutrition-context";
-import { AuthProvider } from "@/lib/auth-context";
+import { NutritionProvider, useNutrition } from "@/lib/nutrition-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import {
   useFonts,
   Poppins_400Regular,
@@ -20,6 +20,13 @@ import {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
+  const { user } = useAuth();
+  const { setFirebaseUid } = useNutrition();
+
+  useEffect(() => {
+    setFirebaseUid(user ? user.uid : null);
+  }, [user, setFirebaseUid]);
+
   return (
     <>
       <StatusBar style="dark" />

@@ -54,13 +54,22 @@ export async function loadWeekLogs(uid: string): Promise<DailyLog[]> {
   const logs: DailyLog[] = [];
   try {
     const db = getFirebaseDatabase();
-    for (let i = 6; i >= 1; i--) {
+    for (let i = 30; i >= 1; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
       const dateKey = getDateKey(d);
       const logRef = ref(db, `userData/${uid}/logs/${dateKey}`);
       const snapshot = await get(logRef);
-      if (snapshot.exists()) logs.push(snapshot.val());
+      if (snapshot.exists()) {
+        logs.push(snapshot.val());
+      } else {
+        logs.push({
+          date: dateKey,
+          entries: [],
+          waterGlasses: 0,
+          steps: 0,
+        });
+      }
     }
   } catch (error) {
     console.error("Error loading week logs:", error);

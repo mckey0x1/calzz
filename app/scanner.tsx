@@ -148,133 +148,133 @@ export default function ScannerScreen() {
                 analyzeFood("", "");
               }
             : undefined
-        }>
-        <LinearGradient
-          colors={[
-            "rgba(0,0,0,0.5)",
-            "transparent",
-            "transparent",
-            "rgba(0,0,0,0.8)",
-          ]}
-          locations={[0, 0.2, 0.7, 1]}
-          style={StyleSheet.absoluteFill}>
-          {/* Top Bar Navigation */}
-          <View style={[styles.topBar, { paddingTop: insets.top + 16 }]}>
+        }
+      />
+      <LinearGradient
+        colors={[
+          "rgba(0,0,0,0.5)",
+          "transparent",
+          "transparent",
+          "rgba(0,0,0,0.8)",
+        ]}
+        locations={[0, 0.2, 0.7, 1]}
+        style={StyleSheet.absoluteFill}>
+        {/* Top Bar Navigation */}
+        <View style={[styles.topBar, { paddingTop: insets.top + 16 }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.topControlButton,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() => router.back()}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </Pressable>
+
+          <View style={styles.brandContainer}>
+            <Text style={styles.brandText}>Calzz</Text>
+          </View>
+
+          {/* Empty view to balance out the close button for true centering */}
+          <View style={{ width: 40 }} />
+        </View>
+
+        {/* Central Area (Clear for camera view) */}
+        <View style={styles.scanAreaContainer}>
+          {/* Visual labels could go here if we were implementing real-time AR object detection */}
+        </View>
+
+        {/* Bottom Area */}
+        <View
+          style={[styles.bottomArea, { paddingBottom: insets.bottom + 24 }]}>
+          {/* Mode Selection Tabs */}
+          <View style={styles.tabsContainer}>
             <Pressable
-              style={({ pressed }) => [
-                styles.topControlButton,
-                { opacity: pressed ? 0.7 : 1 },
+              style={[
+                styles.tab,
+                activeTab === "scan_food" && styles.activeTab,
               ]}
-              onPress={() => router.back()}>
-              <Ionicons name="close" size={20} color="#fff" />
+              onPress={() => handleTabPress("scan_food")}>
+              <MaterialCommunityIcons
+                name="line-scan"
+                size={20}
+                color={activeTab === "scan_food" ? "#000" : "#A1A1AA"}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "scan_food" && styles.activeTabText,
+                ]}>
+                Scan Food
+              </Text>
             </Pressable>
 
-            <View style={styles.brandContainer}>
-              <Text style={styles.brandText}>Calzz</Text>
-            </View>
+            <Pressable
+              style={[
+                styles.tab,
+                activeTab === "barcode" && styles.activeTab,
+              ]}
+              onPress={() => handleTabPress("barcode")}>
+              <Ionicons
+                name="barcode-outline"
+                size={20}
+                color={activeTab === "barcode" ? "#000" : "#A1A1AA"}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "barcode" && styles.activeTabText,
+                ]}>
+                Barcode
+              </Text>
+            </Pressable>
 
-            {/* Empty view to balance out the close button for true centering */}
-            <View style={{ width: 40 }} />
+            <Pressable
+              style={[
+                styles.tab,
+                activeTab === "library" && styles.activeTab,
+              ]}
+              onPress={() => handleTabPress("library")}>
+              <Ionicons
+                name="images-outline"
+                size={20}
+                color={activeTab === "library" ? "#000" : "#A1A1AA"}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === "library" && styles.activeTabText,
+                ]}>
+                Library
+              </Text>
+            </Pressable>
           </View>
 
-          {/* Central Area (Clear for camera view) */}
-          <View style={styles.scanAreaContainer}>
-            {/* Visual labels could go here if we were implementing real-time AR object detection */}
+          {/* Camera Controls */}
+          <View style={styles.cameraControlsContainer}>
+            {/* Flash Button */}
+            <Pressable style={styles.flashButton} onPress={toggleFlash}>
+              <Ionicons
+                name={flashOn ? "flash" : "flash-off"}
+                size={20}
+                color="#fff"
+              />
+            </Pressable>
+
+            {/* Capture Button */}
+            <Pressable
+              style={({ pressed }) => [
+                styles.captureButtonOuter,
+                { transform: [{ scale: pressed ? 0.95 : 1 }] },
+              ]}
+              onPress={handleCapture}>
+              <View style={styles.captureButtonInner} />
+            </Pressable>
+
+            {/* Spacer to balance the flex row */}
+            <View style={styles.flashButtonEmpty} />
           </View>
-
-          {/* Bottom Area */}
-          <View
-            style={[styles.bottomArea, { paddingBottom: insets.bottom + 24 }]}>
-            {/* Mode Selection Tabs */}
-            <View style={styles.tabsContainer}>
-              <Pressable
-                style={[
-                  styles.tab,
-                  activeTab === "scan_food" && styles.activeTab,
-                ]}
-                onPress={() => handleTabPress("scan_food")}>
-                <MaterialCommunityIcons
-                  name="line-scan"
-                  size={20}
-                  color={activeTab === "scan_food" ? "#000" : "#A1A1AA"}
-                />
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === "scan_food" && styles.activeTabText,
-                  ]}>
-                  Scan Food
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.tab,
-                  activeTab === "barcode" && styles.activeTab,
-                ]}
-                onPress={() => handleTabPress("barcode")}>
-                <Ionicons
-                  name="barcode-outline"
-                  size={20}
-                  color={activeTab === "barcode" ? "#000" : "#A1A1AA"}
-                />
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === "barcode" && styles.activeTabText,
-                  ]}>
-                  Barcode
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.tab,
-                  activeTab === "library" && styles.activeTab,
-                ]}
-                onPress={() => handleTabPress("library")}>
-                <Ionicons
-                  name="images-outline"
-                  size={20}
-                  color={activeTab === "library" ? "#000" : "#A1A1AA"}
-                />
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeTab === "library" && styles.activeTabText,
-                  ]}>
-                  Library
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Camera Controls */}
-            <View style={styles.cameraControlsContainer}>
-              {/* Flash Button */}
-              <Pressable style={styles.flashButton} onPress={toggleFlash}>
-                <Ionicons
-                  name={flashOn ? "flash" : "flash-off"}
-                  size={20}
-                  color="#fff"
-                />
-              </Pressable>
-
-              {/* Capture Button */}
-              <Pressable
-                style={({ pressed }) => [
-                  styles.captureButtonOuter,
-                  { transform: [{ scale: pressed ? 0.95 : 1 }] },
-                ]}
-                onPress={handleCapture}>
-                <View style={styles.captureButtonInner} />
-              </Pressable>
-
-              {/* Spacer to balance the flex row */}
-              <View style={styles.flashButtonEmpty} />
-            </View>
-          </View>
-        </LinearGradient>
-      </CameraView>
+        </View>
+      </LinearGradient>
     </View>
   );
 }

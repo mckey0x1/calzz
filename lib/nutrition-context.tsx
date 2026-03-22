@@ -84,27 +84,28 @@ interface NutritionContextValue {
   analyzingPercent: number;
   analyzeFood: (base64Image: string, uri: string) => Promise<void>;
   clearScanResult: () => void;
+  currentStreak: number;
+  last7Days: DailyLog[];
+  weekStatus: boolean[];
 }
 
 const NutritionContext = createContext<NutritionContextValue | null>(null);
 
-const DEFAULT_GOALS: UserGoals = {
-  dailyCalories: 2000,
-  proteinGoal: 150,
-  carbsGoal: 200,
-  fatGoal: 65,
-  targetWeight: 75,
-  currentWeight: 80,
+const EMPTY_GOALS: UserGoals = {
+  dailyCalories: 0,
+  proteinGoal: 0,
+  carbsGoal: 0,
+  fatGoal: 0,
+  targetWeight: 0,
+  currentWeight: 0,
   dietPreference: "balanced",
   waterGoal: 8,
   stepsGoal: 10000,
-  heightFt: 5,
-  heightIn: 6,
-  dateOfBirth: "01/01/2001",
-  gender: "Male",
-  fiberGoal: 38,
-  sugarGoal: 64,
-  sodiumGoal: 2300,
+  heightFt: 0,
+  heightIn: 0,
+  fiberGoal: 0,
+  sugarGoal: 0,
+  sodiumGoal: 0,
 };
 
 function getDateKey(date: Date = new Date()): string {
@@ -132,7 +133,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     createEmptyLog(getDateKey()),
   );
   const [weekLogs, setWeekLogs] = useState<DailyLog[]>([]);
-  const [goals, setGoals] = useState<UserGoals>(DEFAULT_GOALS);
+  const [goals, setGoals] = useState<UserGoals>(EMPTY_GOALS);
   const [isLoading, setIsLoading] = useState(true);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analyzingImage, setAnalyzingImage] = useState<string | null>(null);
@@ -161,10 +162,21 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       }
 
       if (weekData) {
-        setWeekLogs(JSON.parse(weekData));
+        let parsed = JSON.parse(weekData);
+        if (parsed.length < 30) {
+           const logs: DailyLog[] = [];
+           for (let i = 30; i >= 1; i--) {
+             const d = new Date();
+             d.setDate(d.getDate() - i);
+             const dateStr = getDateKey(d);
+             logs.push(parsed.find((l: any) => l.date === dateStr) || createEmptyLog(dateStr));
+           }
+           parsed = logs;
+        }
+        setWeekLogs(parsed);
       } else {
         const logs: DailyLog[] = [];
-        for (let i = 6; i >= 1; i--) {
+        for (let i = 30; i >= 1; i--) {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const log = createEmptyLog(getDateKey(d));
@@ -247,10 +259,35 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     updateGoals({ currentWeight: weight });
   }
 
+  async function hydrateFromFirebase(uid: string) {
+    try {
+      const dbGoals = await loadUserGoals(uid);
+      if (dbGoals) {
+        setGoals(dbGoals);
+        await AsyncStorage.setItem("nutriai_goals", JSON.stringify(dbGoals));
+      }
+
+      const today = getDateKey();
+      const dbTodayLog = await loadDailyLog(uid, today);
+      if (dbTodayLog) {
+        setTodayLog(dbTodayLog);
+        await AsyncStorage.setItem(`nutriai_log_${today}`, JSON.stringify(dbTodayLog));
+      }
+
+      const dbWeekLogs = await loadWeekLogs(uid);
+      if (dbWeekLogs && dbWeekLogs.length > 0) {
+        setWeekLogs(dbWeekLogs);
+        await AsyncStorage.setItem("nutriai_week_logs", JSON.stringify(dbWeekLogs));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   function setFirebaseUid(uid: string | null) {
     firebaseUidRef.current = uid;
     if (uid) {
-      syncAllDataToFirebase(uid, { goals, todayLog, weekLogs }).catch(() => {});
+      hydrateFromFirebase(uid);
     }
   }
 
@@ -317,6 +354,33 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     [todayLog.entries],
   );
 
+  const last7Days = useMemo(() => [...weekLogs, todayLog], [weekLogs, todayLog]);
+
+  const currentStreak = useMemo(() => {
+    let streak = 0;
+    let i = last7Days.length - 1; 
+    if (last7Days[i] && last7Days[i].entries.length > 0) {
+      streak++;
+      i--;
+      while (i >= 0 && last7Days[i] && last7Days[i].entries.length > 0) {
+        streak++;
+        i--;
+      }
+    } else {
+      i--;
+      while (i >= 0 && last7Days[i] && last7Days[i].entries.length > 0) {
+        streak++;
+        i--;
+      }
+    }
+    return streak;
+  }, [last7Days]);
+
+  const weekStatus = useMemo(() => {
+    return last7Days.map(log => log && log.entries && log.entries.length > 0);
+  }, [last7Days]);
+
+
   const value = useMemo(
     () => ({
       todayLog,
@@ -341,6 +405,9 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       analyzingPercent,
       analyzeFood,
       clearScanResult,
+      currentStreak,
+      last7Days,
+      weekStatus,
     }),
     [
       todayLog,
@@ -355,6 +422,9 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       analyzingImage,
       scanResult,
       analyzingPercent,
+      currentStreak,
+      last7Days,
+      weekStatus,
     ],
   );
 

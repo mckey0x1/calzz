@@ -11,10 +11,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useNutrition } from "@/lib/nutrition-context";
 
 export default function StreakScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { currentStreak, weekStatus, last7Days } = useNutrition();
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
   return (
@@ -41,7 +43,7 @@ export default function StreakScreen() {
           <View style={styles.largeStreakContainer}>
             <Ionicons name="flame" size={200} color="#FF9F1C" style={styles.largeFlameIcon} />
             <View style={styles.largeStreakBubble}>
-              <Text style={styles.largeStreakNumber}>0</Text>
+              <Text style={styles.largeStreakNumber}>{currentStreak}</Text>
             </View>
           </View>
 
@@ -55,12 +57,15 @@ export default function StreakScreen() {
 
           {/* Weekly Dots for reference */}
           <View style={styles.weekDisplay}>
-            {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-              <View key={i} style={styles.dayCol}>
-                <Text style={styles.dayLabelSmall}>{day}</Text>
-                <View style={[styles.dayCircle, i < 1 ? styles.dayCircleActive : null]} />
-              </View>
-            ))}
+            {last7Days.map((log, i) => {
+              const dayName = new Date(log.date).toLocaleDateString("en-US", { weekday: "short" })[0];
+              return (
+                <View key={i} style={styles.dayCol}>
+                  <Text style={styles.dayLabelSmall}>{dayName}</Text>
+                  <View style={[styles.dayCircle, weekStatus[i] && styles.dayCircleActive]} />
+                </View>
+              );
+            })}
           </View>
 
           <Pressable 
