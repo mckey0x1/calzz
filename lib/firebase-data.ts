@@ -10,7 +10,8 @@ export async function saveUserGoals(uid: string, goals: UserGoals) {
   try {
     const db = getFirebaseDatabase();
     const goalsRef = ref(db, `userData/${uid}/goals`);
-    await set(goalsRef, goals);
+    const cleanGoals = JSON.parse(JSON.stringify(goals));
+    await set(goalsRef, cleanGoals);
   } catch (error) {
     console.error("Error saving goals:", error);
   }
@@ -32,7 +33,8 @@ export async function saveDailyLog(uid: string, log: DailyLog) {
   try {
     const db = getFirebaseDatabase();
     const logRef = ref(db, `userData/${uid}/logs/${log.date}`);
-    await set(logRef, log);
+    const cleanLog = JSON.parse(JSON.stringify(log));
+    await set(logRef, cleanLog);
   } catch (error) {
     console.error("Error saving daily log:", error);
   }
@@ -84,10 +86,13 @@ export async function syncAllDataToFirebase(
   try {
     const db = getFirebaseDatabase();
     const updates: Record<string, any> = {};
-    updates[`userData/${uid}/goals`] = data.goals;
-    updates[`userData/${uid}/logs/${data.todayLog.date}`] = data.todayLog;
+    const cleanGoals = JSON.parse(JSON.stringify(data.goals));
+    const cleanTodayLog = JSON.parse(JSON.stringify(data.todayLog));
+    updates[`userData/${uid}/goals`] = cleanGoals;
+    updates[`userData/${uid}/logs/${cleanTodayLog.date}`] = cleanTodayLog;
     data.weekLogs.forEach((log) => {
-      updates[`userData/${uid}/logs/${log.date}`] = log;
+      const cleanLog = JSON.parse(JSON.stringify(log));
+      updates[`userData/${uid}/logs/${cleanLog.date}`] = cleanLog;
     });
     const rootRef = ref(db);
     await update(rootRef, updates);

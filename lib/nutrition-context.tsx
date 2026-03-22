@@ -338,19 +338,19 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   }
 
   const totalCalories = useMemo(
-    () => todayLog.entries.reduce((sum, e) => sum + e.calories, 0),
+    () => (todayLog.entries || []).reduce((sum, e) => sum + e.calories, 0),
     [todayLog.entries],
   );
   const totalProtein = useMemo(
-    () => todayLog.entries.reduce((sum, e) => sum + e.protein, 0),
+    () => (todayLog.entries || []).reduce((sum, e) => sum + e.protein, 0),
     [todayLog.entries],
   );
   const totalCarbs = useMemo(
-    () => todayLog.entries.reduce((sum, e) => sum + e.carbs, 0),
+    () => (todayLog.entries || []).reduce((sum, e) => sum + e.carbs, 0),
     [todayLog.entries],
   );
   const totalFat = useMemo(
-    () => todayLog.entries.reduce((sum, e) => sum + e.fat, 0),
+    () => (todayLog.entries || []).reduce((sum, e) => sum + e.fat, 0),
     [todayLog.entries],
   );
 
@@ -359,16 +359,16 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const currentStreak = useMemo(() => {
     let streak = 0;
     let i = last7Days.length - 1; 
-    if (last7Days[i] && last7Days[i].entries.length > 0) {
+    if (last7Days[i] && (last7Days[i].entries?.length || 0) > 0) {
       streak++;
       i--;
-      while (i >= 0 && last7Days[i] && last7Days[i].entries.length > 0) {
+      while (i >= 0 && last7Days[i] && (last7Days[i].entries?.length || 0) > 0) {
         streak++;
         i--;
       }
     } else {
       i--;
-      while (i >= 0 && last7Days[i] && last7Days[i].entries.length > 0) {
+      while (i >= 0 && last7Days[i] && (last7Days[i].entries?.length || 0) > 0) {
         streak++;
         i--;
       }

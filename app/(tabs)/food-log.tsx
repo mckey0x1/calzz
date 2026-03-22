@@ -87,18 +87,18 @@ export default function FoodLogScreen() {
   const currentLog = activeTab === "today" ? todayLog : yesterdayLog;
 
   const totalCalories =
-    currentLog?.entries.reduce((sum, e) => sum + e.calories, 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + e.calories, 0) || 0;
   const totalProtein =
-    currentLog?.entries.reduce((sum, e) => sum + e.protein, 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + e.protein, 0) || 0;
   const totalCarbs =
-    currentLog?.entries.reduce((sum, e) => sum + e.carbs, 0) || 0;
-  const totalFat = currentLog?.entries.reduce((sum, e) => sum + e.fat, 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + e.carbs, 0) || 0;
+  const totalFat = (currentLog?.entries || []).reduce((sum, e) => sum + e.fat, 0) || 0;
   const totalFiber =
-    currentLog?.entries.reduce((sum, e) => sum + (e.fiber || 0), 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + (e.fiber || 0), 0) || 0;
   const totalSugar =
-    currentLog?.entries.reduce((sum, e) => sum + (e.sugar || 0), 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + (e.sugar || 0), 0) || 0;
   const totalSodium =
-    currentLog?.entries.reduce((sum, e) => sum + (e.sodium || 0), 0) || 0;
+    (currentLog?.entries || []).reduce((sum, e) => sum + (e.sodium || 0), 0) || 0;
 
   const caloriesLeft = Math.max(0, goals.dailyCalories - totalCalories);
   const proteinLeft = Math.max(0, goals.proteinGoal - totalProtein);
@@ -431,7 +431,7 @@ export default function FoodLogScreen() {
           </Pressable>
         ))}
 
-        {!currentLog?.entries.length && !isAnalyzing ? (
+        {!(currentLog?.entries?.length) && !isAnalyzing ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
               <Ionicons name="restaurant-outline" size={40} color="#D1D5DB" />

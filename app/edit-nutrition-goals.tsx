@@ -37,6 +37,7 @@ function GoalInputCard({
   trackColor?: string;
 }) {
   const [isFocused, setIsFocused] = useState(false);
+  const inputRef = React.useRef<TextInput>(null);
 
   return (
     <View style={styles.goalCardWrapper}>
@@ -52,7 +53,8 @@ function GoalInputCard({
         </CalorieRing>
       </View>
 
-      <View
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
         style={[
           styles.inputSide,
           isFocused ? styles.inputSideFocused : styles.inputSideUnfocused,
@@ -68,7 +70,7 @@ function GoalInputCard({
           onBlur={() => setIsFocused(false)}
           selectionColor="#1A1A1A"
         />
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -86,6 +88,24 @@ export default function EditNutritionGoalsScreen() {
   const [fiberStr, setFiberStr] = useState((goals.fiberGoal || 38).toString());
   const [sugarStr, setSugarStr] = useState((goals.sugarGoal || 64).toString());
   const [sodiumStr, setSodiumStr] = useState((goals.sodiumGoal || 2300).toString());
+
+  React.useEffect(() => {
+    setCaloriesStr(goals.dailyCalories?.toString() || "");
+    setProteinStr(goals.proteinGoal?.toString() || "");
+    setCarbsStr(goals.carbsGoal?.toString() || "");
+    setFatStr(goals.fatGoal?.toString() || "");
+    setFiberStr((goals.fiberGoal || 38).toString());
+    setSugarStr((goals.sugarGoal || 64).toString());
+    setSodiumStr((goals.sodiumGoal || 2300).toString());
+  }, [
+    goals.dailyCalories,
+    goals.proteinGoal,
+    goals.carbsGoal,
+    goals.fatGoal,
+    goals.fiberGoal,
+    goals.sugarGoal,
+    goals.sodiumGoal,
+  ]);
 
   const [showMicros, setShowMicros] = useState(false);
 
@@ -125,6 +145,17 @@ export default function EditNutritionGoalsScreen() {
           ]}
         >
           <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+        </Pressable>
+        {/* Fill the middle to push Done to the right */}
+        <View style={{ flex: 1 }} />
+        <Pressable
+          onPress={saveAndGoBack}
+          style={({ pressed }) => [
+            styles.doneButton,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <Text style={styles.doneButtonText}>Done</Text>
         </Pressable>
       </View>
 
@@ -256,6 +287,43 @@ export default function EditNutritionGoalsScreen() {
             />
           </View>
         )}
+
+        <Pressable
+          style={{
+            backgroundColor: "#111",
+            paddingVertical: 10,
+            borderRadius: 56,
+            alignItems: "center",
+            justifyContent: "center",
+            marginTop: 30,
+            marginBottom: 10
+          }}
+          onPress={() => router.push("/auto-generate-goals")}
+        >
+          <Text style={{ color: "#fff", fontFamily: "Poppins_600SemiBold", fontSize: 18 }}>Auto Generate Goals</Text>
+        </Pressable>
+
+        <Pressable
+          style={{
+            backgroundColor: "#f5f5f5",
+            paddingVertical: 10,
+            borderRadius: 56,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 40
+          }}
+          onPress={() => {
+            setCaloriesStr(goals.dailyCalories?.toString() || "");
+            setProteinStr(goals.proteinGoal?.toString() || "");
+            setCarbsStr(goals.carbsGoal?.toString() || "");
+            setFatStr(goals.fatGoal?.toString() || "");
+            setFiberStr((goals.fiberGoal || 38).toString());
+            setSugarStr((goals.sugarGoal || 64).toString());
+            setSodiumStr((goals.sodiumGoal || 2300).toString());
+          }}
+        >
+          <Text style={{ color: "#e65c5c", fontFamily: "Poppins_600SemiBold", fontSize: 16 }}>Revert Changes</Text>
+        </Pressable>
       </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -283,6 +351,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 10,
+  },
+  doneButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: "#111",
+  },
+  doneButtonText: {
+    color: "#fff",
+    fontFamily: "Poppins_600SemiBold",
+    fontSize: 14,
   },
   pageTitle: {
     fontSize: 28,

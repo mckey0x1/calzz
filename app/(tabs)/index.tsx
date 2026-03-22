@@ -119,7 +119,7 @@ export default function DashboardScreen() {
 
   const selectedDateStr = selectedDate.toISOString().split("T")[0];
   const selectedLog = last7Days.find(l => l?.date === selectedDateStr);
-  const selectedEntries = selectedLog ? selectedLog.entries : [];
+  const selectedEntries = selectedLog?.entries || [];
 
   const displayCalories = selectedEntries.reduce((sum, e) => sum + e.calories, 0);
   const displayProtein = selectedEntries.reduce((sum, e) => sum + e.protein, 0);
@@ -134,7 +134,7 @@ export default function DashboardScreen() {
 
   const allRecentEntries = last7Days
     .filter(log => !!log)
-    .flatMap(log => log.entries)
+    .flatMap(log => log.entries || [])
     .filter(e => e.imageUri)
     .sort((a, b) => b.timestamp - a.timestamp);
 

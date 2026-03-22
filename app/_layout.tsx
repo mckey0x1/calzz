@@ -69,6 +69,10 @@ function RootLayoutNav() {
           name="streak"
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
+        <Stack.Screen
+          name="auto-generate-goals"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
     </>
   );

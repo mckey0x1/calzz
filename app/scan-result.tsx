@@ -31,7 +31,7 @@ export default function ScanResultScreen() {
 
   // 1. Look up existing entry if viewing history
   const existingEntry = entryId
-    ? [...todayLog.entries, ...weekLogs.flatMap((l) => l.entries)].find(
+    ? [...(todayLog.entries || []), ...weekLogs.flatMap((l) => l.entries || [])].find(
         (e) => e.id === entryId,
       )
     : null;
