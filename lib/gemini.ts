@@ -10,6 +10,9 @@ export async function analyzeFoodImageBase64(base64Image: string) {
       protein: 25,
       carbs: 40,
       fat: 15,
+      fiber: 8,
+      sugar: 4,
+      sodium: 700,
       score: 8,
     };
   }
@@ -21,7 +24,7 @@ export async function analyzeFoodImageBase64(base64Image: string) {
         {
           parts: [
             {
-              text: "Analyze this image of food. Estimate the total calories, protein in grams, carbohydrates in grams, and fat in grams. Also provide a health score from 1 to 10 (10 being very healthy), and a short descriptive name for the dish. Respond STRICTLY in JSON format without any markdown wrappers or additional text, like this:\n{\n  \"name\": \"Chicken Salad\",\n  \"calories\": 350,\n  \"protein\": 30,\n  \"carbs\": 10,\n  \"fat\": 20,\n  \"score\": 8\n}",
+              text: "Analyze this image of food. Estimate the total calories, protein in grams, carbohydrates in grams, fat in grams, fiber in grams, sugar in grams, and sodium in mg. Also provide a health score from 1 to 10 (10 being very healthy), and a short descriptive name for the dish. Respond STRICTLY in JSON format without any markdown wrappers or additional text, like this:\n{\n  \"name\": \"Chicken Salad\",\n  \"calories\": 350,\n  \"protein\": 30,\n  \"carbs\": 10,\n  \"fat\": 20,\n  \"fiber\": 5,\n  \"sugar\": 2,\n  \"sodium\": 450,\n  \"score\": 8\n}",
             },
             {
               inline_data: {
@@ -62,6 +65,9 @@ export async function analyzeFoodImageBase64(base64Image: string) {
       protein: 0,
       carbs: 0,
       fat: 0,
+      fiber: 0,
+      sugar: 0,
+      sodium: 0,
       score: 0,
     };
   }

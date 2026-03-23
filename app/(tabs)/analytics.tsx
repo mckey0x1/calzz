@@ -27,7 +27,7 @@ import Svg, {
   Text as SvgText,
   Rect,
   Line,
-  Polyline
+  Polyline,
 } from "react-native-svg";
 import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
@@ -38,7 +38,8 @@ export default function AnalyticsScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  const { totalCalories, goals, last7Days, currentStreak, weekStatus } = useNutrition();
+  const { totalCalories, goals, last7Days, currentStreak, weekStatus } =
+    useNutrition();
   const [selectedTime, setSelectedTime] = useState("90 Days");
   const router = useRouter();
 
@@ -47,25 +48,37 @@ export default function AnalyticsScreen() {
   const weeklyData = last7Days.map((log) => {
     const d = new Date(log.date);
     const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-    const cals = log && log.entries ? log.entries.reduce((sum, e) => sum + e.calories, 0) : 0;
-    const pCals = log && log.entries ? log.entries.reduce((sum, e) => sum + (e.protein * 4), 0) : 0;
-    const cCals = log && log.entries ? log.entries.reduce((sum, e) => sum + (e.carbs * 4), 0) : 0;
-    const fCals = log && log.entries ? log.entries.reduce((sum, e) => sum + (e.fat * 9), 0) : 0;
+    const cals =
+      log && log.entries
+        ? log.entries.reduce((sum, e) => sum + e.calories, 0)
+        : 0;
+    const pCals =
+      log && log.entries
+        ? log.entries.reduce((sum, e) => sum + e.protein * 4, 0)
+        : 0;
+    const cCals =
+      log && log.entries
+        ? log.entries.reduce((sum, e) => sum + e.carbs * 4, 0)
+        : 0;
+    const fCals =
+      log && log.entries
+        ? log.entries.reduce((sum, e) => sum + e.fat * 9, 0)
+        : 0;
     const computedCals = pCals + cCals + fCals;
     const other = Math.max(0, cals - computedCals);
 
-    return { 
-      day: dayName, 
-      total: cals, 
-      p: pCals, 
-      c: cCals, 
-      f: fCals, 
-      other 
+    return {
+      day: dayName,
+      total: cals,
+      p: pCals,
+      c: cCals,
+      f: fCals,
+      other,
     };
   });
 
   let latestWei = goals.currentWeight || 176;
-  const weightData = last7Days.map(log => {
+  const weightData = last7Days.map((log) => {
     if (log && log.weight) {
       latestWei = log.weight;
       return log.weight;
@@ -125,7 +138,12 @@ export default function AnalyticsScreen() {
               {myWeight} <Text style={styles.weightUnit}>lbs</Text>
             </Text>
             <View style={styles.weightProgressTrack}>
-              <View style={[styles.weightProgressFill, { width: `${progressWeight}%` }]} />
+              <View
+                style={[
+                  styles.weightProgressFill,
+                  { width: `${progressWeight}%` },
+                ]}
+              />
             </View>
             <Text style={styles.goalHint}>
               Goal <Text style={styles.goalHintBold}>{targetWeight} lbs</Text>
@@ -154,11 +172,18 @@ export default function AnalyticsScreen() {
             <Text style={styles.streakLabel}>Day streak</Text>
             <View style={styles.streakWeekRow}>
               {last7Days.map((log, i) => {
-                const dayName = new Date(log.date).toLocaleDateString("en-US", { weekday: "short" })[0];
+                const dayName = new Date(log.date).toLocaleDateString("en-US", {
+                  weekday: "short",
+                })[0];
                 return (
                   <View key={i} style={styles.streakDayDot}>
                     <Text style={styles.streakDayText}>{dayName}</Text>
-                    <View style={[styles.dotCircle, weekStatus[i] && { backgroundColor: "#FF9F1C" }]} />
+                    <View
+                      style={[
+                        styles.dotCircle,
+                        weekStatus[i] && { backgroundColor: "#FF9F1C" },
+                      ]}
+                    />
                   </View>
                 );
               })}
@@ -194,7 +219,8 @@ export default function AnalyticsScreen() {
             <View style={styles.goalPill}>
               <Ionicons name="flag-outline" size={14} color="#444" />
               <Text style={styles.goalPillText}>
-                {Math.round(progressWeight)}% <Text style={styles.goalPillSub}>of goal</Text>
+                {Math.round(progressWeight)}%{" "}
+                <Text style={styles.goalPillSub}>of goal</Text>
               </Text>
               <Ionicons
                 name="pencil-sharp"
@@ -259,7 +285,8 @@ export default function AnalyticsScreen() {
             <Text style={styles.bmiValue}>{bmi.toFixed(2)}</Text>
             <View style={styles.bmiStatusRow}>
               <Text style={styles.bmiStatusLabel}>Your weight is</Text>
-              <View style={[styles.bmiStatusBadge, { backgroundColor: bmiColor }]}>
+              <View
+                style={[styles.bmiStatusBadge, { backgroundColor: bmiColor }]}>
                 <Text style={styles.bmiStatusText}>{bmiStatusText}</Text>
               </View>
             </View>
@@ -337,20 +364,23 @@ function WeeklyBarChart({ data, goal }: { data: any[]; goal: number }) {
         {/* Bars */}
         {data.map((item, i) => {
           const totalH = (item.total / (goal || 2500)) * chartHeight;
-          const clampedH = item.total > 0 ? Math.min(Math.max(totalH, 4), chartHeight) : 0;
-          
-          let cRectH = 0, fRectH = 0, oRectH = 0;
+          const clampedH =
+            item.total > 0 ? Math.min(Math.max(totalH, 4), chartHeight) : 0;
+
+          let cRectH = 0,
+            fRectH = 0,
+            oRectH = 0;
           if (item.total > 0) {
             const scale = clampedH / item.total;
             cRectH = item.c * scale;
             fRectH = item.f * scale;
             oRectH = item.other * scale;
           } else {
-             oRectH = clampedH;
+            oRectH = clampedH;
           }
 
           const x = 35 + i * spacing;
-          
+
           return (
             <G key={i}>
               {item.total > 0 && (
@@ -371,7 +401,7 @@ function WeeklyBarChart({ data, goal }: { data: any[]; goal: number }) {
                     y={chartHeight - clampedH}
                     width={barWidth}
                     height={fRectH + oRectH + cRectH}
-                    rx={(fRectH + oRectH + cRectH) > barWidth ? barWidth / 2 : 0}
+                    rx={fRectH + oRectH + cRectH > barWidth ? barWidth / 2 : 0}
                     fill="#ffb74d"
                   />
                   {/* Fats Stack (Blue) */}
@@ -380,11 +410,11 @@ function WeeklyBarChart({ data, goal }: { data: any[]; goal: number }) {
                     y={chartHeight - clampedH}
                     width={barWidth}
                     height={fRectH + oRectH}
-                    rx={(fRectH + oRectH) > barWidth ? barWidth / 2 : 0}
+                    rx={fRectH + oRectH > barWidth ? barWidth / 2 : 0}
                     fill="#5a8bed"
                   />
                   {/* Other Stack (Gray fallbacks for missing logic constraints) */}
-                  {(oRectH > 0) && (
+                  {oRectH > 0 && (
                     <Rect
                       x={x - barWidth / 2}
                       y={chartHeight - clampedH}
@@ -447,11 +477,13 @@ function WeightChartSvg({ data, goal }: { data: number[]; goal: number }) {
   }
 
   const stepX = (chartW - 45) / Math.max(validData.length - 1, 1);
-  const points = validData.map((val, i) => {
-    const x = 45 + i * stepX;
-    const y = chartH - ((val - minData) / range) * chartH + 10;
-    return `${x},${y}`;
-  }).join(" ");
+  const points = validData
+    .map((val, i) => {
+      const x = 45 + i * stepX;
+      const y = chartH - ((val - minData) / range) * chartH + 10;
+      return `${x},${y}`;
+    })
+    .join(" ");
 
   const goalY = chartH - ((goal - minData) / range) * chartH + 10;
 
@@ -463,7 +495,7 @@ function WeightChartSvg({ data, goal }: { data: number[]; goal: number }) {
         viewBox={`0 0 ${chartW} ${chartH + 40}`}>
         {/* Grid Lines */}
         {gridLines.map((val, i) => {
-          const y = (i * (chartH / 4)) + 10;
+          const y = i * (chartH / 4) + 10;
           return (
             <G key={i}>
               <Line
@@ -510,8 +542,16 @@ function WeightChartSvg({ data, goal }: { data: number[]; goal: number }) {
           const x = 45 + i * stepX;
           const y = chartH - ((val - minData) / range) * chartH + 10;
           return (
-            <Circle key={i} cx={x} cy={y} r="4" fill="#111" stroke="#fff" strokeWidth="2" />
-          )
+            <Circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="4"
+              fill="#111"
+              stroke="#fff"
+              strokeWidth="2"
+            />
+          );
         })}
       </Svg>
     </View>
@@ -708,7 +748,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: "700",
     color: "#111",
   },
@@ -774,11 +814,11 @@ const styles = StyleSheet.create({
   motivationalPill: {
     backgroundColor: "#f0fff4",
     padding: 12,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: "center",
   },
   motivationalText: {
-    fontSize: 13,
+    fontSize: 10,
     color: "#2f855a",
     fontWeight: "600",
     textAlign: "center",
@@ -792,7 +832,7 @@ const styles = StyleSheet.create({
     marginVertical: 15,
   },
   bmiValue: {
-    fontSize: SCREEN_WIDTH > 400 ? 42 : 36,
+    fontSize: SCREEN_WIDTH > 400 ? 42 : 30,
     fontWeight: "700",
     color: "#111",
   },

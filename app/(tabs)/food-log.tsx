@@ -142,7 +142,7 @@ export default function FoodLogScreen() {
 
         {/* ───── Date Tabs ───── */}
         <View style={styles.dateTabs}>
-          {(["today", "yesterday"] as Tab[]).map((tab) => (
+          {(["today", "yesterday"] as Tab[])?.map((tab) => (
             <Pressable
               key={tab}
               onPress={() => {
@@ -370,7 +370,7 @@ export default function FoodLogScreen() {
         )}
 
         {/* Render Entries */}
-        {currentLog?.entries.map((entry) => (
+        {currentLog?.entries?.map((entry) => (
           <Pressable
             key={entry.id}
             style={[styles.entryCard, { backgroundColor: "#fff" }]}

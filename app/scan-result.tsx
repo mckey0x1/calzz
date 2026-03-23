@@ -31,8 +31,8 @@ export default function ScanResultScreen() {
 
   // 1. Look up existing entry if viewing history
   const existingEntry = entryId
-    ? [...(todayLog.entries || []), ...weekLogs.flatMap((l) => l.entries || [])].find(
-        (e) => e.id === entryId,
+    ? [...(todayLog?.entries || []), ...weekLogs.flatMap((l) => l?.entries || [])].find(
+        (e) => e?.id === entryId,
       )
     : null;
 
@@ -45,6 +45,9 @@ export default function ScanResultScreen() {
         carbs: existingEntry.carbs,
         protein: existingEntry.protein,
         fat: existingEntry.fat,
+        fiber: existingEntry.fiber,
+        sugar: existingEntry.sugar,
+        sodium: existingEntry.sodium,
         score: existingEntry.confidence || 8,
         time: new Date(existingEntry.timestamp).toLocaleTimeString([], {
           hour: "2-digit",
@@ -104,6 +107,9 @@ export default function ScanResultScreen() {
       protein: currentScan.protein * quantity,
       carbs: currentScan.carbs * quantity,
       fat: currentScan.fat * quantity,
+      fiber: (currentScan.fiber || 0) * quantity,
+      sugar: (currentScan.sugar || 0) * quantity,
+      sodium: (currentScan.sodium || 0) * quantity,
       meal: "lunch",
       confidence: 95,
       imageUri: currentScan.image,
@@ -114,7 +120,7 @@ export default function ScanResultScreen() {
 
   function handleClose() {
     clearScanResult();
-    router.replace("/food-log");
+    router.back()
   }
 
   function modifyQuantity(amount: number) {

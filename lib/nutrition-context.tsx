@@ -148,9 +148,9 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   async function loadData() {
     try {
       const [goalsData, todayData, weekData] = await Promise.all([
-        AsyncStorage.getItem("nutriai_goals"),
-        AsyncStorage.getItem(`nutriai_log_${getDateKey()}`),
-        AsyncStorage.getItem("nutriai_week_logs"),
+        AsyncStorage.getItem("calzz_goals"),
+        AsyncStorage.getItem(`calzz_log_${getDateKey()}`),
+        AsyncStorage.getItem("calzz_week_logs"),
       ]);
 
       if (goalsData) setGoals(JSON.parse(goalsData));
@@ -205,7 +205,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   async function saveTodayLog(log: DailyLog) {
     setTodayLog(log);
     await AsyncStorage.setItem(
-      `nutriai_log_${getDateKey()}`,
+      `calzz_log_${getDateKey()}`,
       JSON.stringify(log),
     );
     syncToFirebase(log);
@@ -217,40 +217,46 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       id: generateId(),
       timestamp: Date.now(),
     };
-    const updated = { ...todayLog, entries: [...todayLog.entries, newEntry] };
+    const logBase = todayLog || createEmptyLog(getDateKey());
+    const updated = { ...logBase, entries: [...(logBase?.entries || []), newEntry] };
     saveTodayLog(updated);
   }
 
   function removeFoodEntry(id: string) {
+    const logBase = todayLog || createEmptyLog(getDateKey());
     const updated = {
-      ...todayLog,
-      entries: todayLog.entries.filter((e) => e.id !== id),
+      ...logBase,
+      entries: (logBase?.entries || []).filter((e) => e.id !== id),
     };
     saveTodayLog(updated);
   }
 
   function addWater() {
-    const updated = { ...todayLog, waterGlasses: todayLog.waterGlasses + 1 };
+    const logBase = todayLog || createEmptyLog(getDateKey());
+    const updated = { ...logBase, waterGlasses: (logBase?.waterGlasses || 0) + 1 };
     saveTodayLog(updated);
   }
 
   function removeWater() {
-    if (todayLog.waterGlasses > 0) {
-      const updated = { ...todayLog, waterGlasses: todayLog.waterGlasses - 1 };
+    const logBase = todayLog || createEmptyLog(getDateKey());
+    if ((logBase?.waterGlasses || 0) > 0) {
+      const updated = { ...logBase, waterGlasses: logBase.waterGlasses - 1 };
       saveTodayLog(updated);
     }
   }
 
   async function updateGoals(newGoals: Partial<UserGoals>) {
-    const updated = { ...goals, ...newGoals };
-    setGoals(updated);
-    await AsyncStorage.setItem("nutriai_goals", JSON.stringify(updated));
-    const uid = firebaseUidRef.current;
-    if (uid) {
-      try {
-        await saveUserGoals(uid, updated);
-      } catch {}
-    }
+    setGoals((prev) => {
+      const updated = { ...prev, ...newGoals };
+      
+      // Fire async side effects without waiting in render loop
+      AsyncStorage.setItem("calzz_goals", JSON.stringify(updated)).catch(() => {});
+      const uid = firebaseUidRef.current;
+      if (uid) {
+        saveUserGoals(uid, updated).catch(() => {});
+      }
+      return updated;
+    });
   }
 
   async function updateWeight(weight: number) {
@@ -264,20 +270,20 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       const dbGoals = await loadUserGoals(uid);
       if (dbGoals) {
         setGoals(dbGoals);
-        await AsyncStorage.setItem("nutriai_goals", JSON.stringify(dbGoals));
+        await AsyncStorage.setItem("calzz_goals", JSON.stringify(dbGoals));
       }
 
       const today = getDateKey();
       const dbTodayLog = await loadDailyLog(uid, today);
       if (dbTodayLog) {
         setTodayLog(dbTodayLog);
-        await AsyncStorage.setItem(`nutriai_log_${today}`, JSON.stringify(dbTodayLog));
+        await AsyncStorage.setItem(`calzz_log_${today}`, JSON.stringify(dbTodayLog));
       }
 
       const dbWeekLogs = await loadWeekLogs(uid);
       if (dbWeekLogs && dbWeekLogs.length > 0) {
         setWeekLogs(dbWeekLogs);
-        await AsyncStorage.setItem("nutriai_week_logs", JSON.stringify(dbWeekLogs));
+        await AsyncStorage.setItem("calzz_week_logs", JSON.stringify(dbWeekLogs));
       }
     } catch (e) {
       console.error(e);
@@ -312,9 +318,33 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
 
     try {
       const result = await analyzeFoodImageBase64(base64Image);
+      
+      let cloudUri = uri;
+      // Upload to Cloudinary to persist public URL in Firebase
+      if (base64Image) {
+        try {
+          const data = new FormData();
+          data.append('file', `data:image/jpeg;base64,${base64Image}`);
+          // Default unsigned preset used. User must create this or another unsigned preset in Cloudinary dashboard
+          data.append("upload_preset", "calzz_preset"); 
+          data.append('cloud_name', 'depqvqscd');
+          
+          const uploadRes = await fetch("https://api.cloudinary.com/v1_1/depqvqscd/image/upload", {
+            method: "POST",
+            body: data,
+          });
+          const uploadData = await uploadRes.json();
+          if (uploadData.secure_url) {
+            cloudUri = uploadData.secure_url;
+          }
+        } catch (uploadError) {
+          console.error("Cloudinary upload failed:", uploadError);
+        }
+      }
+
       setScanResult({
         ...result,
-        image: uri,
+        image: cloudUri,
         time: new Date().toLocaleTimeString([], {
           hour: "2-digit",
           minute: "2-digit",

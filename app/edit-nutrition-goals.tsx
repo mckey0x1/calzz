@@ -353,9 +353,9 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   doneButton: {
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 30,
     backgroundColor: "#111",
   },
   doneButtonText: {

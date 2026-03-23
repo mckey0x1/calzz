@@ -66,7 +66,9 @@ function ProgressRing({
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      <View style={StyleSheet.absoluteFillObject}>{children}</View>
+      <View style={[StyleSheet.absoluteFillObject, { alignItems: "center", justifyContent: "center" }]}>
+        {children}
+      </View>
     </View>
   );
 }
@@ -81,6 +83,8 @@ export default function DashboardScreen() {
     goals,
     todayLog,
     isAnalyzing,
+    analyzingImage,
+    analyzingPercent,
     scanResult,
     last7Days,
     currentStreak,
@@ -118,27 +122,46 @@ export default function DashboardScreen() {
   };
 
   const selectedDateStr = selectedDate.toISOString().split("T")[0];
-  const selectedLog = last7Days.find(l => l?.date === selectedDateStr);
+  const selectedLog = last7Days.find((l) => l?.date === selectedDateStr);
   const selectedEntries = selectedLog?.entries || [];
 
-  const displayCalories = selectedEntries.reduce((sum, e) => sum + e.calories, 0);
+  const displayCalories = selectedEntries.reduce(
+    (sum, e) => sum + e.calories,
+    0,
+  );
   const displayProtein = selectedEntries.reduce((sum, e) => sum + e.protein, 0);
   const displayCarbs = selectedEntries.reduce((sum, e) => sum + e.carbs, 0);
   const displayFat = selectedEntries.reduce((sum, e) => sum + e.fat, 0);
-  const displayFiber = selectedEntries.reduce((sum, e) => sum + (e.fiber || 0), 0);
-  const displaySugar = selectedEntries.reduce((sum, e) => sum + (e.sugar || 0), 0);
-  const displaySodium = selectedEntries.reduce((sum, e) => sum + (e.sodium || 0), 0);
+  const displayFiber = selectedEntries.reduce(
+    (sum, e) => sum + (e.fiber || 0),
+    0,
+  );
+  const displaySugar = selectedEntries.reduce(
+    (sum, e) => sum + (e.sugar || 0),
+    0,
+  );
+  const displaySodium = selectedEntries.reduce(
+    (sum, e) => sum + (e.sodium || 0),
+    0,
+  );
 
-  const caloriesLeft = Math.max((goals.dailyCalories || 2500) - displayCalories, 0);
-  const calorieProgress = Math.min(displayCalories / (goals.dailyCalories || 2500), 1);
+  const caloriesLeft = Math.max(
+    (goals.dailyCalories || 2500) - displayCalories,
+    0,
+  );
+  const calorieProgress = Math.min(
+    displayCalories / (goals.dailyCalories || 2500),
+    1,
+  );
 
   const allRecentEntries = last7Days
-    .filter(log => !!log)
-    .flatMap(log => log.entries || [])
-    .filter(e => e.imageUri)
+    .filter((log) => !!log)
+    .flatMap((log) => log.entries || [])
+    .filter((e) => e.imageUri)
     .sort((a, b) => b.timestamp - a.timestamp);
 
-  const latestRecentUpload = allRecentEntries.length > 0 ? allRecentEntries[0] : null;
+  const latestRecentUpload =
+    allRecentEntries.length > 0 ? allRecentEntries[0] : null;
 
   return (
     <View style={styles.container}>
@@ -162,7 +185,7 @@ export default function DashboardScreen() {
             {/* <Ionicons name="logo-apple" size={28} color="#111" /> */}
             <Text style={styles.appTitle}>Calzz</Text>
           </View>
-          <Pressable 
+          <Pressable
             style={styles.streakPill}
             onPress={() => router.push("/streak")}>
             <Text style={styles.streakCount}>🔥 {currentStreak}</Text>
@@ -185,7 +208,9 @@ export default function DashboardScreen() {
             {dates.map((date, idx) => {
               const isSelected =
                 date.toDateString() === selectedDate.toDateString();
-              const isFuture = new Date(date).setHours(0,0,0,0) > new Date().setHours(0,0,0,0);
+              const isFuture =
+                new Date(date).setHours(0, 0, 0, 0) >
+                new Date().setHours(0, 0, 0, 0);
               const isToday = date.toDateString() === new Date().toDateString();
               const dayName = date.toLocaleDateString("en-US", {
                 weekday: "short",
@@ -193,12 +218,16 @@ export default function DashboardScreen() {
               const dayNum = date.getDate();
 
               const dateLogStr = date.toISOString().split("T")[0];
-              const logForDate = last7Days.find(l => l?.date === dateLogStr);
-              let ringColor = "#8a8a8e"; 
+              const logForDate = last7Days.find((l) => l?.date === dateLogStr);
+              let ringColor = "#8a8a8e";
               let ringStyle: "solid" | "dashed" = "solid";
 
               if (!isFuture) {
-                const totalCals = logForDate?.entries?.reduce((sum, e) => sum + e.calories, 0) || 0;
+                const totalCals =
+                  logForDate?.entries?.reduce(
+                    (sum, e) => sum + e.calories,
+                    0,
+                  ) || 0;
                 if (totalCals === 0) {
                   ringColor = "#8a8a8e";
                   ringStyle = "dashed";
@@ -236,7 +265,11 @@ export default function DashboardScreen() {
                   <View
                     style={[
                       styles.dateCircle,
-                      { borderColor: ringColor, borderStyle: ringStyle, borderWidth: 2 },
+                      {
+                        borderColor: ringColor,
+                        borderStyle: ringStyle,
+                        borderWidth: 2,
+                      },
                       isFuture && !isSelected && { opacity: 0.3 },
                     ]}>
                     <Text
@@ -344,14 +377,27 @@ export default function DashboardScreen() {
                 <View style={styles.healthHeader}>
                   <Text style={styles.healthTitle}>Health score</Text>
                   <Text style={styles.healthValue}>
-                    {Math.round((calorieProgress + (displayProtein/(goals.proteinGoal||1)))*5)}/10
+                    {Math.round(
+                      (calorieProgress +
+                        displayProtein / (goals.proteinGoal || 1)) *
+                        5,
+                    )}
+                    /10
                   </Text>
                 </View>
                 <View style={styles.healthBarTrack}>
-                  <View style={[styles.healthBarFill, { width: `${Math.min((calorieProgress + (displayProtein/(goals.proteinGoal||1)))*50, 100)}%` }]} />
+                  <View
+                    style={[
+                      styles.healthBarFill,
+                      {
+                        width: `${Math.min((calorieProgress + displayProtein / (goals.proteinGoal || 1)) * 50, 100)}%`,
+                      },
+                    ]}
+                  />
                 </View>
                 <Text style={styles.healthFeedback}>
-                  Keep logging your meals! The more accurately you log protein and macros, the higher your health score will be.
+                  Keep logging your meals! The more accurately you log protein
+                  and macros, the higher your health score will be.
                 </Text>
               </View>
             </View>
@@ -373,10 +419,87 @@ export default function DashboardScreen() {
         {/* Recently uploaded */}
         <View style={styles.recentSection}>
           <Text style={styles.sectionTitle}>Recently uploaded</Text>
-          {latestRecentUpload ? (
-            <Pressable 
+
+          {/* Analyzing Card */}
+          {isAnalyzing && (
+            <View style={[styles.analyzingCard, { backgroundColor: "#fff" }]}>
+              <View style={styles.analyzingContent}>
+                <View style={styles.analyzingImageContainer}>
+                  {analyzingImage ? (
+                    <Image
+                      source={{ uri: analyzingImage }}
+                      style={styles.analyzingImage}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.analyzingImagePlaceholder,
+                        { backgroundColor: "#F3F4F6" },
+                      ]}
+                    />
+                  )}
+                  <View style={styles.analyzingOverlay}>
+                    <ProgressRing
+                      progress={analyzingPercent / 100}
+                      size={48}
+                      strokeWidth={4}
+                      color="#fff"
+                      trackColor="rgba(255,255,255,0.3)">
+                      <Text
+                        style={[styles.analyzingPercent, { color: "#fff" }]}>
+                        {analyzingPercent}%
+                      </Text>
+                    </ProgressRing>
+                  </View>
+                </View>
+
+                <View style={styles.analyzingTextContainer}>
+                  <Text style={styles.analyzingTitle}>Analyzing food...</Text>
+                  <View style={styles.skeletonBars}>
+                    <View
+                      style={[
+                        styles.skeletonLine,
+                        { backgroundColor: "#E5E7EB" },
+                      ]}
+                    />
+                    <View style={styles.skeletonRow}>
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: "#E5E7EB" },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: "#E5E7EB" },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.skeletonLineShort,
+                          { backgroundColor: "#E5E7EB" },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <Text style={styles.analyzingSubtext}>
+                    We'll notify you when done!
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {latestRecentUpload && !isAnalyzing ? (
+            <Pressable
               style={styles.recentItem}
-              onPress={() => router.push({ pathname: "/scan-result", params: { entryId: latestRecentUpload.id } })}>
+              onPress={() =>
+                router.push({
+                  pathname: "/scan-result",
+                  params: { entryId: latestRecentUpload.id },
+                })
+              }>
               <View style={styles.recentImagePlaceholder}>
                 <Image
                   source={{ uri: latestRecentUpload.imageUri }}
@@ -384,8 +507,12 @@ export default function DashboardScreen() {
                 />
               </View>
               <View style={styles.recentTextContainer}>
-                <Text style={{ fontWeight: "700", fontSize: 16 }}>{latestRecentUpload.name}</Text>
-                <Text style={{ color: "#777", fontSize: 12 }}>{latestRecentUpload.calories} kcal</Text>
+                <Text style={{ fontWeight: "700", fontSize: 16 }}>
+                  {latestRecentUpload.name}
+                </Text>
+                <Text style={{ color: "#777", fontSize: 12 }}>
+                  {latestRecentUpload.calories} kcal
+                </Text>
               </View>
             </Pressable>
           ) : (
@@ -403,7 +530,9 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               </View>
-              <Text style={styles.recentEmptyText}>Tap scanner to add your first meal of the day</Text>
+              <Text style={styles.recentEmptyText}>
+                Tap scanner to add your first meal of the day
+              </Text>
             </View>
           )}
         </View>
@@ -848,4 +977,36 @@ const styles = StyleSheet.create({
     color: "#888",
     fontWeight: "500",
   },
+  // Analyzing Card
+  analyzingCard: {
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "#f0f0f5",
+  },
+  analyzingContent: { flexDirection: "row", gap: 16, alignItems: "center" },
+  analyzingImageContainer: { position: "relative", width: 72, height: 72 },
+  analyzingImage: { width: 72, height: 72, borderRadius: 16 },
+  analyzingImagePlaceholder: { width: 72, height: 72, borderRadius: 16 },
+  analyzingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  analyzingPercent: { fontSize: 12, fontWeight: "700" },
+  analyzingTextContainer: { flex: 1, gap: 6 },
+  analyzingTitle: { fontSize: 16, fontWeight: "700", color: "#111" },
+  skeletonBars: { gap: 6, marginVertical: 4 },
+  skeletonLine: { height: 6, borderRadius: 3, width: "90%" },
+  skeletonRow: { flexDirection: "row", gap: 6 },
+  skeletonLineShort: { flex: 1, height: 6, borderRadius: 3 },
+  analyzingSubtext: { fontSize: 12, color: "#888", fontWeight: "500" },
 });

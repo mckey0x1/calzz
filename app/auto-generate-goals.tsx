@@ -354,6 +354,12 @@ export default function AutoGenerateGoalsScreen() {
     let carbsGoal = Math.round((dailyCalories * cPct) / 4);
     let fatGoal = Math.round((dailyCalories * fPct) / 9);
 
+    // Micronutrients Calculation
+    let fiberGoal = Math.max(20, Math.round((dailyCalories / 1000) * 14));
+    let sugarGoal = Math.round((dailyCalories * 0.10) / 4); // max 10% of calories as sugar
+    let sodiumGoal = 2300; // FDA recommendation
+
+
     updateGoals({
       heightFt: heightFtFinal,
       heightIn: heightInFinal,
@@ -361,6 +367,9 @@ export default function AutoGenerateGoalsScreen() {
       proteinGoal,
       carbsGoal,
       fatGoal,
+      fiberGoal,
+      sugarGoal,
+      sodiumGoal,
       targetWeight: targetWeightLbs,
       currentWeight: weightLbs,
       gender: answers.gender,
