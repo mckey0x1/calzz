@@ -221,7 +221,10 @@ export default function AnalyticsScreen() {
               />
             </View>
             <Text style={styles.goalHint}>
-              Goal <Text style={styles.goalHintBold}>{targetWeight} lbs</Text>
+              Goal{" "}
+              <Text style={styles.goalHintBold}>
+                {Number(targetWeight).toFixed(1)} lbs
+              </Text>
             </Text>
             <Pressable
               onPress={() => router.push("/log-weight")}

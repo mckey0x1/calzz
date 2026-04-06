@@ -163,10 +163,17 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const initializingUidRef = useRef<string | null>(null);
   const goalsRef = useRef<UserGoals>(EMPTY_GOALS);
   const sqliteReadyRef = useRef(false);
+  const hydratingRef = useRef(false);
+  const todayLogRef = useRef(todayLog);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     goalsRef.current = goals;
   }, [goals]);
+
+  useEffect(() => {
+    todayLogRef.current = todayLog;
+  }, [todayLog]);
 
   // ⚡ PHASE 1: Instant load from local storage (AsyncStorage + SQLite)
   useEffect(() => {
@@ -175,9 +182,10 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
 
   async function loadLocalData() {
     try {
-      // Step 1: Load from AsyncStorage first (fastest for goals/config)
-      const [goalsData] = await Promise.all([
+      // ─── PHASE 1: Load goals + today's data FAST (renders UI in ~5ms) ───
+      const [goalsData, todayData] = await Promise.all([
         AsyncStorage.getItem("calzz_goals"),
+        AsyncStorage.getItem(`calzz_log_${getDateKey()}`),
       ]);
 
       if (goalsData) {
@@ -186,46 +194,66 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         goalsRef.current = parsed;
       }
 
-      // Step 2: Try SQLite for structured meal data (if not web)
-      if (Platform.OS !== "web") {
+      // Show today's data from AsyncStorage immediately (fastest path)
+      if (todayData) {
+        setTodayLog(JSON.parse(todayData));
+      }
+
+      // ─── Mark UI as ready — user sees their dashboard NOW ───
+      setIsLoading(false);
+
+      // ─── PHASE 2: Load historical data in background (non-blocking) ───
+      // This happens AFTER the UI is already visible
+      queueMicrotask(async () => {
         try {
-          const dbInstance = await getDatabase(); // Initialize schema
-          sqliteReadyRef.current = dbInstance !== null;
+          // Try SQLite for richer data (if available)
+          if (Platform.OS !== "web") {
+            try {
+              const dbInstance = await getDatabase();
+              sqliteReadyRef.current = dbInstance !== null;
 
-          if (sqliteReadyRef.current) {
-            const today = getDateKey();
-            const todayEntries = await getMealsByDate(today);
-            const todayWeight = await getWeightForDate(today);
+              if (sqliteReadyRef.current) {
+                const today = getDateKey();
+                const [todayEntries, todayWeight] = await Promise.all([
+                  getMealsByDate(today),
+                  getWeightForDate(today),
+                ]);
 
-            if (todayEntries.length > 0 || todayWeight !== null) {
-              setTodayLog({
-                date: today,
-                entries: todayEntries,
-                weight: todayWeight ?? undefined,
-              });
-            }
+                // Only update if SQLite has data (it may be more recent than AsyncStorage)
+                if (todayEntries.length > 0 || todayWeight !== null) {
+                  setTodayLog({
+                    date: today,
+                    entries: todayEntries,
+                    weight: todayWeight ?? undefined,
+                  });
+                }
 
-            // Load last 30 days from SQLite
-            const dates = getLastNDates(30).slice(0, -1); // exclude today
-            const historicalLogs = await buildDailyLogs(dates);
-            if (historicalLogs.length > 0) {
-              setWeekLogs(historicalLogs);
+                // Load last 30 days from SQLite
+                const dates = getLastNDates(30).slice(0, -1);
+                const historicalLogs = await buildDailyLogs(dates);
+                if (historicalLogs.length > 0) {
+                  setWeekLogs(historicalLogs);
+                }
+              } else {
+                // SQLite not available, load week from AsyncStorage
+                const weekData = await AsyncStorage.getItem("calzz_week_logs");
+                if (weekData) setWeekLogs(JSON.parse(weekData));
+              }
+            } catch (sqliteErr) {
+              console.warn("SQLite not available:", sqliteErr);
+              const weekData = await AsyncStorage.getItem("calzz_week_logs");
+              if (weekData) setWeekLogs(JSON.parse(weekData));
             }
           } else {
-            // SQLite not available, fallback
-            await loadFromAsyncStorageFallback();
+            const weekData = await AsyncStorage.getItem("calzz_week_logs");
+            if (weekData) setWeekLogs(JSON.parse(weekData));
           }
-        } catch (sqliteErr) {
-          console.warn("SQLite not available, falling back to AsyncStorage:", sqliteErr);
-          await loadFromAsyncStorageFallback();
+        } catch (e) {
+          console.error("Background data load failed:", e);
         }
-      } else {
-        // Web — use AsyncStorage only
-        await loadFromAsyncStorageFallback();
-      }
+      });
     } catch (e) {
       console.error("Failed to load local data:", e);
-    } finally {
       setIsLoading(false);
     }
   }
@@ -274,33 +302,40 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     } catch (e) {}
   }
 
-  // ─── Reactive Sync: Persist changes locally + background Firebase ──
+  // ─── Reactive Sync: Debounced + skip during hydration ──────────────
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || hydratingRef.current) return;
 
-    const sync = async () => {
-      // Save to AsyncStorage (always, for fallback)
-      await AsyncStorage.setItem(
-        `calzz_log_${getDateKey()}`,
-        JSON.stringify(todayLog),
-      );
-
-      // Sync to Widgets
-      syncWidgetData(todayLog, goals);
-
-      // Background Firebase sync (non-blocking)
-      if (firebaseUidRef.current) {
-        saveDailyLog(firebaseUidRef.current, todayLog).catch((e) =>
-          console.log("Firebase sync fail:", e),
+    // Debounce: wait 500ms before writing to avoid rapid-fire during batch updates
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      const sync = async () => {
+        // Save to AsyncStorage (always, for fallback)
+        await AsyncStorage.setItem(
+          `calzz_log_${getDateKey()}`,
+          JSON.stringify(todayLog),
         );
-      }
-    };
 
-    sync();
+        // Sync to Widgets
+        syncWidgetData(todayLog, goals);
+
+        // Background Firebase sync (non-blocking)
+        if (firebaseUidRef.current) {
+          saveDailyLog(firebaseUidRef.current, todayLog).catch((e) =>
+            console.log("Firebase sync fail:", e),
+          );
+        }
+      };
+      sync();
+    }, 500);
+
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
   }, [todayLog, goals, isLoading]);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || hydratingRef.current) return;
     AsyncStorage.setItem("calzz_goals", JSON.stringify(goals));
     if (!firebaseUidRef.current) return;
     saveUserGoals(firebaseUidRef.current, goals).catch((e) =>
@@ -334,13 +369,8 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      // 3. Firebase sync in background (non-blocking)
-      if (firebaseUidRef.current) {
-        setTodayLog((prev) => {
-          saveDailyLog(firebaseUidRef.current!, prev).catch(() => {});
-          return prev;
-        });
-      }
+      // 3. Firebase sync uses ref (no extra setState cycle)
+      // The debounced reactive sync effect handles this automatically
     },
     [],
   );
@@ -472,8 +502,14 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
 
   // ─── Firebase Hydration (Background, Non-blocking) ─────────────────
   async function hydrateFromFirebase(uid: string) {
+    hydratingRef.current = true; // Suppress reactive sync during hydration
     try {
-      const dbGoals = await loadUserGoals(uid);
+      // Fetch goals and today's log in parallel
+      const [dbGoals, dbTodayLog] = await Promise.all([
+        loadUserGoals(uid),
+        loadDailyLog(uid, getDateKey()),
+      ]);
+
       if (dbGoals) {
         setGoals(dbGoals);
         goalsRef.current = dbGoals;
@@ -493,14 +529,12 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       }
 
       const today = getDateKey();
-      const dbTodayLog = await loadDailyLog(uid, today);
       if (dbTodayLog) {
         setTodayLog(dbTodayLog);
         await AsyncStorage.setItem(
           `calzz_log_${today}`,
           JSON.stringify(dbTodayLog),
         );
-        // Import into SQLite
         if (sqliteReadyRef.current) {
           bulkImportEntries([dbTodayLog]).catch(() => {});
         }
@@ -513,6 +547,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         );
       }
 
+      // Week logs fetched with single batch read (already optimized in firebase-data.ts)
       const dbWeekLogs = await loadWeekLogs(uid);
       if (dbWeekLogs && dbWeekLogs.length > 0) {
         setWeekLogs(dbWeekLogs);
@@ -520,7 +555,6 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
           "calzz_week_logs",
           JSON.stringify(dbWeekLogs),
         );
-        // Import into SQLite for future instant loads
         if (sqliteReadyRef.current) {
           bulkImportEntries(dbWeekLogs).catch(() => {});
         }
@@ -529,10 +563,11 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem("calzz_week_logs", JSON.stringify([]));
       }
 
-      // Mark sync timestamp
       await setLastSyncTimestamp();
     } catch (e) {
       console.error(e);
+    } finally {
+      hydratingRef.current = false;
     }
   }
 
@@ -540,10 +575,11 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     firebaseUidRef.current = uid;
     if (uid) {
       if (initializingUidRef.current === uid) return;
-      setIsLoading(true);
-      await hydrateFromFirebase(uid);
-      setIsLoading(false);
-      setIsHydrated(true);
+      // DON'T set isLoading=true here — local data is already displayed
+      // Firebase hydration happens silently in the background
+      hydrateFromFirebase(uid).then(() => {
+        setIsHydrated(true);
+      });
     } else {
       // User signed out — clear all cached data
       const today = getDateKey();

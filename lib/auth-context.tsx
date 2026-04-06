@@ -10,7 +10,7 @@ import React, {
 } from "react";
 import { Platform, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setupRevenueCat, hasPremiumAccess } from "./revenuecat";
+import { setupRevenueCat, hasPremiumAccess, logInUser, logOutUser } from "./revenuecat";
 import {
   onAuthStateChanged,
   signInWithCredential,
@@ -109,9 +109,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               return;
             }
 
-            // Set loading state immediately when auth state changes
-            setIsLoading(true);
-
+            // Only set loading to true if we don't already have an initialized state
+            // to avoid unmounting the entire app root layout during active sign-ins.
+            
             setUser(firebaseUser);
             if (firebaseUser) {
               // ⚡ FAST PATH: Check local cache first for onboarding status
@@ -122,6 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setIsNewUser(false);
                 setIsLoading(false); // Reveal app early
               }
+
+              // 🔑 Identify this user in RevenueCat so they appear in the dashboard
+              await logInUser(firebaseUser.uid);
 
               await loadOrCreateProfile(firebaseUser);
               setIsLoading(false); // Ensure loading is false after full check
@@ -159,25 +162,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const db = getFirebaseDatabase();
       const userRef = ref(db, `users/${firebaseUser.uid}`);
-      const snapshot = await get(userRef);
+      const goalsRef = ref(db, `userData/${firebaseUser.uid}/goals`);
+      
+      // Parallel check for profile and goals
+      const [snap, goalsSnap] = await Promise.all([
+        get(userRef),
+        get(goalsRef)
+      ]);
 
-      if (snapshot.exists()) {
-        const existing = snapshot.val() as UserProfile;
+      const hasOnboarded =
+        goalsSnap.exists() ||
+        (await AsyncStorage.getItem(`onboarding_${firebaseUser.uid}`)) === "true";
 
+      if (snap.exists()) {
+        const existing = snap.val() as UserProfile;
         const updates: any = {
           lastLoginAt: Date.now(),
           isPremium: pStatus,
           lastPremiumCheckAt: Date.now(),
         };
         await update(userRef, updates);
-
         setUserProfile({ ...existing, ...updates });
-        setIsNewUser(false);
-        // Cache completion status locally for instant launch
-        await AsyncStorage.setItem(`onboarding_${firebaseUser.uid}`, "true");
-        await AsyncStorage.setItem("onboarding_done", "true");
+        setIsNewUser(!hasOnboarded);
+        
+        if (hasOnboarded) {
+          await AsyncStorage.setItem(`onboarding_${firebaseUser.uid}`, "true");
+          await AsyncStorage.setItem("onboarding_done", "true");
+        }
       } else {
-        setIsNewUser(true);
+        // No profile at all
+        setIsNewUser(!hasOnboarded);
         const newProfile: UserProfile = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
@@ -258,7 +272,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Google sign in error:", error);
+      // console.error("Google sign in error:", error);
       setIsSigningIn(false);
     }
   }
@@ -268,6 +282,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       justSignedOutRef.current = true;
       setJustSignedOut(true);
       await AsyncStorage.removeItem("onboarding_done");
+
+      // 🔑 Log out from RevenueCat (reset to anonymous)
+      await logOutUser();
+
       const authInstance = getFirebaseAuth();
       await firebaseSignOut(authInstance);
       if (Platform.OS !== "web") {

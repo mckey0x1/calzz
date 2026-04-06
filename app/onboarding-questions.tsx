@@ -22,6 +22,8 @@ import { useNutrition, UserGoals } from "@/lib/nutrition-context";
 import { useAuth } from "@/lib/auth-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Animated, {
+  FadeIn,
+  FadeOut,
   FadeInRight,
   FadeOutLeft,
   useSharedValue,
@@ -119,6 +121,7 @@ function CustomPicker({
 }
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 function WeightResultsChart() {
   const line1Progress = useSharedValue(0);
@@ -153,9 +156,6 @@ function WeightResultsChart() {
 
   // Calzz: smooth descent to weight loss plateau
   const calzzPath = `M ${startX} ${startY} C 80 ${startY}, 130 90, 160 105 C 190 120, 230 120, ${endX} 120`;
-
-  const appleIconPath =
-    "M12,2C11.5,2 11,2.19 10.59,2.59C10.5,2.68 10.15,3 9.61,3.44C8.36,4.44 7,5.5 7,7C7,8.5 8,9.5 9,9.5C9.5,9.5 10,9.3 10.5,9C11,8.7 11.5,8.5 12,8.5C12.5,8.5 13,8.7 13.5,9C14,9.3 14.5,9.5 15,9.5C16,9.5 17,8.5 17,7C17,5.5 15.64,4.44 14.39,3.44C13.85,3 13.5,2.68 13.41,2.59C13,2.19 12.5,2 12,2Z";
 
   return (
     <View style={styles.chartCard}>
@@ -389,6 +389,19 @@ export default function OnboardingQuestionsScreen() {
 
   useEffect(() => {
     setIsMidOnboarding(true);
+    // Load persisted state to handle Android background kills during OAuth
+    AsyncStorage.getItem("onboarding_state").then((data) => {
+      if (data) {
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.step !== undefined) setStep(parsed.step);
+          if (parsed.answers) setAnswers(parsed.answers);
+        } catch (e) {
+          console.error("Failed to parse onboarding state", e);
+        }
+      }
+    });
+
     return () => setIsMidOnboarding(false);
   }, []);
 
@@ -404,6 +417,14 @@ export default function OnboardingQuestionsScreen() {
     workouts: "",
     diet: "",
   });
+
+  // Save state on every change
+  useEffect(() => {
+    AsyncStorage.setItem(
+      "onboarding_state",
+      JSON.stringify({ step, answers }),
+    ).catch(console.error);
+  }, [step, answers]);
 
   const [toastMessage, setToastMessage] = useState("");
   const fadeAnim = useRef(new RNAnimated.Value(0)).current;
@@ -554,6 +575,7 @@ export default function OnboardingQuestionsScreen() {
     setIsNewUser(false);
     setIsMidOnboarding(false);
     await AsyncStorage.setItem("onboarding_done", "true");
+    await AsyncStorage.removeItem("onboarding_state"); // Clean up state
     router.replace("/(tabs)");
   };
 
@@ -886,35 +908,59 @@ export default function OnboardingQuestionsScreen() {
             isCalculatingBMR ? (
               <View style={styles.analyzingContainer}>
                 <View style={styles.analyzingCircle}>
-                  <ActivityIndicator size="large" color="#111" />
-                  <Text style={styles.analyzingPercentText}>
-                    {bmrProgress}%
-                  </Text>
+                  <Svg width={140} height={140} viewBox="0 0 100 100">
+                    <Circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      stroke="rgba(0,0,0,0.05)"
+                      strokeWidth="8"
+                      fill="none"
+                    />
+                    <AnimatedCircle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      stroke="#111"
+                      strokeWidth="8"
+                      fill="none"
+                      strokeDasharray="283"
+                      strokeDashoffset={283 - (283 * bmrProgress) / 100}
+                      strokeLinecap="round"
+                      transform="rotate(-90 50 50)"
+                    />
+                  </Svg>
+                  <View style={styles.analyzingPercentContainer}>
+                    <Text style={styles.analyzingPercentText}>
+                      {bmrProgress}%
+                    </Text>
+                  </View>
                 </View>
+
                 <Text style={styles.analyzingHeadline}>
-                  Creating your custom plan
+                  Tailoring your experience
                 </Text>
                 <Text style={styles.analyzingSubhead}>
-                  We're tailoring Calzz to your unique metabolism and goals...
+                  We're calibrating Calzz to your unique metabolism and
+                  personalized health goals...
                 </Text>
-                <View style={styles.miniProgressTrack}>
-                  <Animated.View
-                    style={[
-                      styles.miniProgressFill,
-                      { width: `${bmrProgress}%` },
-                    ]}
-                  />
+
+                <View style={styles.analyzingStatusBadge}>
+                  <ActivityIndicator size="small" color="#111" />
+                  <Text style={styles.analyzingStatusText}>
+                    Calculating BMR & Macros
+                  </Text>
                 </View>
               </View>
             ) : (
               <View style={styles.premiumAuthContainer}>
-                <View style={styles.premiumAuthIcon}>
+                {/* <View style={styles.premiumAuthIcon}>
                   <LinearGradient
                     colors={["#111", "#333333ff"]}
                     style={StyleSheet.absoluteFill}
                   />
                   <AntDesign name="google" size={40} color="#fff" />
-                </View>
+                </View> */}
 
                 <Text style={styles.premiumAuthTitle}>
                   Your journey starts here
@@ -1326,30 +1372,26 @@ const styles = StyleSheet.create({
   },
   // Premium Auth & Analyzing Styles
   analyzingContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
+    paddingTop: 10,
     width: "100%",
+    alignItems: "center",
   },
   analyzingCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    alignItems: "center",
+    width: 140,
+    height: 140,
     justifyContent: "center",
-    marginBottom: 40,
+    alignItems: "center",
+    marginBottom: 32,
     position: "relative",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+  },
+  analyzingPercentContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
   },
   analyzingPercentText: {
-    position: "absolute",
-    fontSize: 20,
-    fontFamily: "Poppins_600SemiBold",
+    fontSize: 28,
+    fontFamily: "Poppins_700Bold",
     color: "#111",
   },
   analyzingHeadline: {
@@ -1360,24 +1402,28 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   analyzingSubhead: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: "Poppins_400Regular",
     color: "#666",
     textAlign: "center",
-    paddingHorizontal: 30,
     lineHeight: 22,
+    marginBottom: 32,
   },
-  miniProgressTrack: {
-    width: "60%",
-    height: 4,
+  analyzingStatusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.05)",
-    borderRadius: 2,
-    marginTop: 40,
-    overflow: "hidden",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 100,
+    gap: 8,
   },
-  miniProgressFill: {
-    height: "100%",
-    backgroundColor: "#111",
+  analyzingStatusText: {
+    fontSize: 12,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#111",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   premiumAuthContainer: {
     alignItems: "center",

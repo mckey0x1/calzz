@@ -95,19 +95,28 @@ export default function FoodLogScreen() {
   const yesterdayLog = weekLogs.length > 0 ? weekLogs[weekLogs.length - 1] : null;
   const currentLog = activeTab === "today" ? todayLog : yesterdayLog;
 
-  const totalCalories =
-    (currentLog?.entries || []).reduce((sum, e) => sum + e.calories, 0) || 0;
-  const totalProtein =
-    (currentLog?.entries || []).reduce((sum, e) => sum + e.protein, 0) || 0;
-  const totalCarbs =
-    (currentLog?.entries || []).reduce((sum, e) => sum + e.carbs, 0) || 0;
-  const totalFat = (currentLog?.entries || []).reduce((sum, e) => sum + e.fat, 0) || 0;
-  const totalFiber =
-    (currentLog?.entries || []).reduce((sum, e) => sum + (e.fiber || 0), 0) || 0;
-  const totalSugar =
-    (currentLog?.entries || []).reduce((sum, e) => sum + (e.sugar || 0), 0) || 0;
-  const totalSodium =
-    (currentLog?.entries || []).reduce((sum, e) => sum + (e.sodium || 0), 0) || 0;
+  // Single-pass memoized macro computation
+  const macros = React.useMemo(() => {
+    let calories = 0, protein = 0, carbs = 0, fat = 0, fiber = 0, sugar = 0, sodium = 0;
+    for (const e of currentLog?.entries || []) {
+      calories += e.calories;
+      protein += e.protein;
+      carbs += e.carbs;
+      fat += e.fat;
+      fiber += e.fiber || 0;
+      sugar += e.sugar || 0;
+      sodium += e.sodium || 0;
+    }
+    return { calories, protein, carbs, fat, fiber, sugar, sodium };
+  }, [currentLog?.entries]);
+
+  const totalCalories = macros.calories;
+  const totalProtein = macros.protein;
+  const totalCarbs = macros.carbs;
+  const totalFat = macros.fat;
+  const totalFiber = macros.fiber;
+  const totalSugar = macros.sugar;
+  const totalSodium = macros.sodium;
 
   const caloriesLeft = Math.max(0, goals.dailyCalories - totalCalories);
   const proteinLeft = Math.max(0, goals.proteinGoal - totalProtein);

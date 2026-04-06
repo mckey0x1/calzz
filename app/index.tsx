@@ -17,12 +17,11 @@ import {
 import * as Network from "expo-network";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { router, Redirect } from "expo-router";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
-import { useNutrition } from "@/lib/nutrition-context";
 import { GlassCard } from "@/components/GlassCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -58,17 +57,19 @@ export default function OnboardingScreen() {
     signInWithGoogle,
     isSigningIn,
     user,
-    isLoading,
+    isLoading: authLoading,
     justSignedOut,
     clearJustSignedOut,
     isNewUser,
     isMidOnboarding,
   } = useAuth();
-  const { isLoading: nutritionLoading, isHydrated } = useNutrition();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // 🔒 Navigation lock: once we navigate away, NEVER redirect again from this screen
+  const hasNavigatedAwayRef = useRef(false);
 
   // ⚡ Fast-path: check local cache before Firebase responds
   const [cachedRoute, setCachedRoute] = useState<string | null>(null);
@@ -104,11 +105,13 @@ export default function OnboardingScreen() {
     ]).start(() => setToastMessage(""));
   };
 
+  // Reset the navigation lock when the user signs out so they see the splash again
   useEffect(() => {
-    if (!isLoading && !user && justSignedOut) {
+    if (!authLoading && !user && justSignedOut) {
+      hasNavigatedAwayRef.current = false;
       clearJustSignedOut();
     }
-  }, [user, isLoading, justSignedOut, clearJustSignedOut]);
+  }, [user, authLoading, justSignedOut, clearJustSignedOut]);
 
   const onScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -136,6 +139,8 @@ export default function OnboardingScreen() {
         animated: true,
       });
     } else {
+      // 🔒 Lock: user is going to onboarding, stop all future redirects from here
+      hasNavigatedAwayRef.current = true;
       router.push("/onboarding-questions");
     }
   };
@@ -153,33 +158,47 @@ export default function OnboardingScreen() {
     setShowBottomSheet(true);
   };
 
-  // ⚡ FAST PATH: Use local cache for instant loading while Firebase syncs
-  if (!cacheChecked || isLoading || nutritionLoading) {
+  // Auth-based redirection — guarded by the navigation lock
+  useEffect(() => {
+    // If we already navigated away (e.g. user tapped "Get Started"), do NOTHING
+    if (hasNavigatedAwayRef.current) return;
+
+    if (!authLoading && cacheChecked) {
+      if (user && !justSignedOut) {
+        hasNavigatedAwayRef.current = true;
+        if (cachedRoute) {
+          router.replace(cachedRoute as any);
+        } else if (isNewUser && !isMidOnboarding) {
+          router.replace("/onboarding-questions");
+        } else if (!isNewUser) {
+          router.replace("/(tabs)");
+        }
+      }
+    }
+  }, [
+    authLoading,
+    cacheChecked,
+    user,
+    isNewUser,
+    isMidOnboarding,
+    cachedRoute,
+    justSignedOut,
+  ]);
+
+  if (!cacheChecked || authLoading) {
     return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}>
         <LinearGradient
           colors={["#dfffa2ff", "#f3f4d4ff"]}
           style={StyleSheet.absoluteFill}
         />
         <ActivityIndicator size="large" color="#111" />
       </View>
-    ); // Splash screen may be hidden, so show a loading indicator
-  }
-
-  // If cached route exists and user is logged in, go straight to dashboard
-  if (cachedRoute && user && !justSignedOut) {
-    return <Redirect href={cachedRoute as any} />;
-  }
-
-  // If auth resolved and user is logged in (but no cache), redirect based on status
-  if (user && !justSignedOut) {
-    if (isNewUser) {
-      if (!isMidOnboarding) {
-        return <Redirect href="/onboarding-questions" />;
-      }
-    } else {
-      return <Redirect href="/(tabs)" />;
-    }
+    );
   }
 
   return (
@@ -343,8 +362,7 @@ export default function OnboardingScreen() {
                 if (Platform.OS !== "web")
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 await signInWithGoogle();
-              }}
-              disabled={isSigningIn}>
+              }}>
               {isSigningIn ? (
                 <ActivityIndicator color={colors.text} size="small" />
               ) : (

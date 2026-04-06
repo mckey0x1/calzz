@@ -1,3 +1,4 @@
+module.exports =
 {
   "expo": {
     "name": "Calzz",
@@ -31,7 +32,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "googleServicesFile": "./google-services.json",
+      "googleServicesFile": process.env.GOOGLE_SERVICES_JSON,
       "versionCode": 4
     },
     "web": {

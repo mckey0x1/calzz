@@ -450,8 +450,8 @@ export default function AutoGenerateGoalsScreen() {
       const feetItems = Array.from({ length: 6 }, (_, i) => i + 3);
       const inchItems = Array.from({ length: 12 }, (_, i) => i);
       const cmItems = Array.from({ length: 161 }, (_, i) => i + 90);
-      const kgItems = Array.from({ length: 201 }, (_, i) => i + 30);
-      const lbItems = Array.from({ length: 451 }, (_, i) => i + 70);
+      const kgItems = Array.from({ length: 201 }, (_, i) => i + 20);
+      const lbItems = Array.from({ length: 451 }, (_, i) => i + 40);
 
       return (
         <View style={styles.pickerWrapper}>

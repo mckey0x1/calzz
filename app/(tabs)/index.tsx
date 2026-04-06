@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   StyleSheet,
   Text,
@@ -24,8 +24,7 @@ import { useNutrition } from "@/lib/nutrition-context";
 import { useIsFocused } from "@react-navigation/native";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Simple Progress Ring component for inline usage
-function ProgressRing({
+const ProgressRing = React.memo(function ProgressRing({
   size,
   progress,
   color,
@@ -76,7 +75,7 @@ function ProgressRing({
       </View>
     </View>
   );
-}
+});
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
@@ -122,47 +121,51 @@ export default function DashboardScreen() {
 
   const webTopInset = Platform.OS === "web" ? 67 : 0;
 
-  // Generate last 30 days
-  const getDays = () => {
-    const dates = [];
+  // Generate last 30 days — memoized to avoid creating 32 Date objects every render
+  const dates = useMemo(() => {
+    const result = [];
     for (let i = 30; i >= -1; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      dates.push(d);
+      result.push(d);
     }
-    return dates;
-  };
+    return result;
+  }, []);
 
-  const dates = getDays();
-
-  const handleScroll = (event: any) => {
+  const handleScroll = useCallback((event: any) => {
     const slide = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
     setActiveSlide(slide);
-  };
+  }, []);
 
   const selectedDateStr = selectedDate.toISOString().split("T")[0];
-  const selectedLog = last7Days.find((l) => l?.date === selectedDateStr);
+  const selectedLog = useMemo(
+    () => last7Days.find((l) => l?.date === selectedDateStr),
+    [last7Days, selectedDateStr]
+  );
   const selectedEntries = selectedLog?.entries || [];
 
-  const displayCalories = selectedEntries.reduce(
-    (sum, e) => sum + e.calories,
-    0,
-  );
-  const displayProtein = selectedEntries.reduce((sum, e) => sum + e.protein, 0);
-  const displayCarbs = selectedEntries.reduce((sum, e) => sum + e.carbs, 0);
-  const displayFat = selectedEntries.reduce((sum, e) => sum + e.fat, 0);
-  const displayFiber = selectedEntries.reduce(
-    (sum, e) => sum + (e.fiber || 0),
-    0,
-  );
-  const displaySugar = selectedEntries.reduce(
-    (sum, e) => sum + (e.sugar || 0),
-    0,
-  );
-  const displaySodium = selectedEntries.reduce(
-    (sum, e) => sum + (e.sodium || 0),
-    0,
-  );
+  // Single-pass macro computation instead of 7 separate .reduce()
+  const displayMacros = useMemo(() => {
+    let calories = 0, protein = 0, carbs = 0, fat = 0, fiber = 0, sugar = 0, sodium = 0;
+    for (const e of selectedEntries) {
+      calories += e.calories;
+      protein += e.protein;
+      carbs += e.carbs;
+      fat += e.fat;
+      fiber += e.fiber || 0;
+      sugar += e.sugar || 0;
+      sodium += e.sodium || 0;
+    }
+    return { calories, protein, carbs, fat, fiber, sugar, sodium };
+  }, [selectedEntries]);
+
+  const displayCalories = displayMacros.calories;
+  const displayProtein = displayMacros.protein;
+  const displayCarbs = displayMacros.carbs;
+  const displayFat = displayMacros.fat;
+  const displayFiber = displayMacros.fiber;
+  const displaySugar = displayMacros.sugar;
+  const displaySodium = displayMacros.sodium;
 
   const caloriesLeft = Math.max(
     (goals.dailyCalories || 2500) - displayCalories,
@@ -173,16 +176,20 @@ export default function DashboardScreen() {
     1,
   );
 
-  const allRecentEntries = last7Days
-    .filter((log) => !!log)
-    .flatMap((log) => log.entries || [])
-    .filter((e) => e.imageUri)
-    .sort((a, b) => b.timestamp - a.timestamp);
+  const allRecentEntries = useMemo(
+    () =>
+      last7Days
+        .filter((log) => !!log)
+        .flatMap((log) => log.entries || [])
+        .filter((e) => e.imageUri)
+        .sort((a, b) => b.timestamp - a.timestamp),
+    [last7Days]
+  );
 
   const latestRecentUpload =
     allRecentEntries.length > 0 ? allRecentEntries[0] : null;
 
-  const calculateHealthScore = () => {
+  const healthData = useMemo(() => {
     // 1. Calories adherence (40%)
     const calGoal = goals.dailyCalories || 2000;
     const calDiff = Math.abs(displayCalories - calGoal);
@@ -198,14 +205,11 @@ export default function DashboardScreen() {
     const carbScore = Math.min(displayCarbs / carbGoal, 1) * 1;
     const fatScore = Math.min(displayFat / fatGoal, 1) * 1;
 
-    // 4. Junk penalty (10% - based on sugar and sodium limits)
+    // 4. Junk penalty (10%)
     const sugarGoal = goals.sugarGoal || 64;
     const sodiumGoal = goals.sodiumGoal || 2300;
     const sugarPenalty = Math.max(0, (displaySugar - sugarGoal) / sugarGoal);
-    const sodiumPenalty = Math.max(
-      0,
-      (displaySodium - sodiumGoal) / sodiumGoal,
-    );
+    const sodiumPenalty = Math.max(0, (displaySodium - sodiumGoal) / sodiumGoal);
     const junkScore = Math.max(0, (1 - (sugarPenalty + sodiumPenalty)) * 1);
 
     const totalRaw = calScore + proScore + carbScore + fatScore + junkScore;
@@ -213,9 +217,7 @@ export default function DashboardScreen() {
       score: Math.min(Math.max(Math.round(totalRaw), 0), 10),
       percent: Math.min(Math.max(totalRaw * 10, 0), 100),
     };
-  };
-
-  const healthData = calculateHealthScore();
+  }, [displayCalories, displayProtein, displayCarbs, displayFat, displaySugar, displaySodium, goals]);
 
   return (
     <View style={styles.container}>

@@ -10,8 +10,7 @@ export async function saveUserGoals(uid: string, goals: UserGoals) {
   try {
     const db = getFirebaseDatabase();
     const goalsRef = ref(db, `userData/${uid}/goals`);
-    const cleanGoals = JSON.parse(JSON.stringify(goals));
-    await set(goalsRef, cleanGoals);
+    await set(goalsRef, goals);
   } catch (error) {
     console.error("Error saving goals:", error);
   }
@@ -33,8 +32,7 @@ export async function saveDailyLog(uid: string, log: DailyLog) {
   try {
     const db = getFirebaseDatabase();
     const logRef = ref(db, `userData/${uid}/logs/${log.date}`);
-    const cleanLog = JSON.parse(JSON.stringify(log));
-    await set(logRef, cleanLog);
+    await set(logRef, log);
   } catch (error) {
     console.error("Error saving daily log:", error);
   }
@@ -56,15 +54,25 @@ export async function loadWeekLogs(uid: string): Promise<DailyLog[]> {
   const logs: DailyLog[] = [];
   try {
     const db = getFirebaseDatabase();
-    for (let i = 30; i >= 1; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateKey = getDateKey(d);
-      const logRef = ref(db, `userData/${uid}/logs/${dateKey}`);
-      const snapshot = await get(logRef);
-      if (snapshot.exists()) {
-        logs.push(snapshot.val());
+    // Single read of parent path — replaces 30 sequential get() calls
+    const logsRef = ref(db, `userData/${uid}/logs`);
+    const snapshot = await get(logsRef);
+    
+    if (snapshot.exists()) {
+      const allLogs = snapshot.val();
+      // Build cutoff date (30 days ago)
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 30);
+      const cutoffStr = cutoff.toISOString().split("T")[0];
+      const todayStr = new Date().toISOString().split("T")[0];
+      
+      for (const [dateKey, logData] of Object.entries(allLogs)) {
+        if (dateKey >= cutoffStr && dateKey < todayStr && logData) {
+          logs.push(logData as DailyLog);
+        }
       }
+      // Sort chronologically
+      logs.sort((a, b) => a.date.localeCompare(b.date));
     }
   } catch (error) {
     console.error("Error loading week logs:", error);
@@ -79,13 +87,10 @@ export async function syncAllDataToFirebase(
   try {
     const db = getFirebaseDatabase();
     const updates: Record<string, any> = {};
-    const cleanGoals = JSON.parse(JSON.stringify(data.goals));
-    const cleanTodayLog = JSON.parse(JSON.stringify(data.todayLog));
-    updates[`userData/${uid}/goals`] = cleanGoals;
-    updates[`userData/${uid}/logs/${cleanTodayLog.date}`] = cleanTodayLog;
+    updates[`userData/${uid}/goals`] = data.goals;
+    updates[`userData/${uid}/logs/${data.todayLog.date}`] = data.todayLog;
     data.weekLogs.forEach((log) => {
-      const cleanLog = JSON.parse(JSON.stringify(log));
-      updates[`userData/${uid}/logs/${cleanLog.date}`] = cleanLog;
+      updates[`userData/${uid}/logs/${log.date}`] = log;
     });
     const rootRef = ref(db);
     await update(rootRef, updates);

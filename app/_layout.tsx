@@ -22,7 +22,7 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { user, isLoading: authLoading } = useAuth();
-  const { setFirebaseUid, isLoading: nutritionLoading } = useNutrition();
+  const { setFirebaseUid } = useNutrition();
 
   useEffect(() => {
     setFirebaseUid(user ? user.uid : null);
@@ -37,18 +37,26 @@ function RootLayoutNav() {
   });
 
   useEffect(() => {
-    // Only hide splash when ALL data sources are ready
-    if (fontsLoaded && !authLoading && !nutritionLoading) {
-      SplashScreen.hideAsync();
+    async function prepare() {
+      if (fontsLoaded && !authLoading) {
+        await SplashScreen.hideAsync();
+      }
     }
-  }, [fontsLoaded, authLoading, nutritionLoading]);
+    prepare();
+  }, [fontsLoaded, authLoading]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || authLoading) {
+    return null;
+  }
 
   return (
     <>
       <StatusBar style="dark" />
-      <Stack screenOptions={{ headerBackTitle: "Back" }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          animation: "none",
+        }}>
         <Stack.Screen
           name="index"
           options={{ headerShown: false, animation: "slide_from_right" }}
