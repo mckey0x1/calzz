@@ -22,6 +22,7 @@ import { useThemeColors } from "@/constants/colors";
 import { useNutrition } from "@/lib/nutrition-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Network from "expo-network";
+import { useNotifications } from "@/lib/notification-context";
 
 export default function ScanResultScreen() {
   const colors = useThemeColors("light");
@@ -29,6 +30,7 @@ export default function ScanResultScreen() {
   const { addFoodEntry, removeFoodEntry, scanResult, todayLog, weekLogs, clearScanResult } =
     useNutrition();
   const { entryId } = useLocalSearchParams();
+  const { scheduleNotification } = useNotifications();
 
   const [toastMessage, setToastMessage] = useState("");
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -164,6 +166,15 @@ export default function ScanResultScreen() {
       confidence: currentScan.score * 10,
       imageUri: currentScan.image,
     });
+    
+    // Fire a local notification 1 second later!
+    scheduleNotification(
+      "Food successfully logged! 🥘",
+      `Added ${currentScan.name} (${Math.round(currentScan.calories * quantity)} kcal) to your daily log.`,
+      { foodId: currentScan.name },
+      1
+    );
+
     clearScanResult();
     router.replace("/(tabs)");
   }

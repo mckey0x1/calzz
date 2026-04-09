@@ -24,12 +24,14 @@ import Purchases, {
   PurchasesPackage,
 } from "react-native-purchases";
 import * as Network from "expo-network";
+import { useNotifications } from "@/lib/notification-context";
 
 const { width, height } = Dimensions.get("window");
 
 export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const { checkPremiumStatus } = useAuth();
+  const { scheduleNotification } = useNotifications();
 
   const [selectedPackage, setSelectedPackage] =
     useState<PurchasesPackage | null>(null);
@@ -80,6 +82,15 @@ export default function PaywallScreen() {
       await checkPremiumStatus(pkgTypeStr as any, true); // <--- Forcing true so Firebase syncs instantly
 
       setIsProcessing(false);
+      
+      // Send a local notification for the purchase
+      scheduleNotification(
+        "🎉 Welcome to Calzz Premium!",
+        `Your ${pkgTypeStr} subscription is now active. Enjoy unlimited scanning and insights!`,
+        { type: 'premium_purchase' },
+        1.5
+      );
+
       // Success! Go back and show the scanner
       router.back();
       setTimeout(() => {

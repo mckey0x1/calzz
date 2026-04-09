@@ -34,6 +34,7 @@ function ClassicTabLayout() {
         headerTransparent: true,
         headerTitle: "",
         tabBarShowLabel: false,
+        animation: "none",
       }}>
       <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="food-log" options={{ title: "Log" }} />
@@ -262,6 +263,5 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
 }
 
 export default function TabLayout() {
-  // Always use the custom layout for now to ensure design consistency
   return <ClassicTabLayout />;
 }

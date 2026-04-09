@@ -22,6 +22,7 @@ import * as Haptics from "expo-haptics";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeColors } from "@/constants/colors";
 import { useAuth } from "@/lib/auth-context";
+import { useNutrition } from "@/lib/nutrition-context";
 import { GlassCard } from "@/components/GlassCard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -63,6 +64,8 @@ export default function OnboardingScreen() {
     isNewUser,
     isMidOnboarding,
   } = useAuth();
+
+  const { isLoading: nutritionLoading } = useNutrition();
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -185,17 +188,17 @@ export default function OnboardingScreen() {
     justSignedOut,
   ]);
 
-  if (!cacheChecked || authLoading) {
+  if (!cacheChecked || authLoading || nutritionLoading || (user && !justSignedOut)) {
     return (
       <View
         style={[
           styles.container,
           { justifyContent: "center", alignItems: "center" },
         ]}>
-        <LinearGradient
+        {/* <LinearGradient
           colors={["#dfffa2ff", "#f3f4d4ff"]}
           style={StyleSheet.absoluteFill}
-        />
+        /> */}
         <ActivityIndicator size="large" color="#111" />
       </View>
     );

@@ -9,6 +9,7 @@ import {
   Platform,
   Dimensions,
   Image,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,7 @@ import {
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
 import { useNutrition } from "@/lib/nutrition-context";
+import { useNotifications } from "@/lib/notification-context";
 
 import { useIsFocused } from "@react-navigation/native";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -77,6 +79,8 @@ const ProgressRing = React.memo(function ProgressRing({
   );
 });
 
+let hasShownStreakThisSession = false;
+
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const {
@@ -99,13 +103,51 @@ export default function DashboardScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const dateScrollRef = useRef<ScrollView>(null);
 
+  const { scheduleNotification } = useNotifications();
+
   const isFocused = useIsFocused();
+  const streakSlideAnim = useRef(new Animated.Value(-200)).current;
+
+  // Generate current week days (Sun -> Sat)
+  const weekDays = useMemo(() => {
+    const dates = [];
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const distanceToSunday = -dayOfWeek;
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() + distanceToSunday);
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(sunday);
+        d.setDate(sunday.getDate() + i);
+        dates.push(d);
+    }
+    return dates;
+  }, []);
 
   useEffect(() => {
     if (isFocused) {
       scrollRef.current?.scrollTo({ y: 0, animated: false });
+      
+      if (!hasShownStreakThisSession) {
+        hasShownStreakThisSession = true;
+        // Slide in custom toast
+        Animated.spring(streakSlideAnim, {
+          toValue: Platform.OS === 'web' ? 80 : insets.top + 10,
+          useNativeDriver: true,
+          bounciness: 12
+        }).start();
+
+        // Slide out after 4 seconds
+        setTimeout(() => {
+          Animated.timing(streakSlideAnim, {
+            toValue: -200,
+            duration: 400,
+            useNativeDriver: true
+          }).start();
+        }, 6000);
+      }
     }
-  }, [isFocused]);
+  }, [isFocused, streakSlideAnim, insets.top]);
 
   useEffect(() => {
     if (!isAnalyzing && scanResult) {
@@ -623,6 +665,42 @@ export default function DashboardScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* --- Custom Custom UI Streak Toast --- */}
+      <Animated.View style={[styles.customStreakToast, { transform: [{ translateY: streakSlideAnim }] }]}>
+        <View style={styles.cstLeft}>
+          <Text style={styles.cstTitle}>{currentStreak} Day streak</Text>
+          <View style={styles.cstWeekRow}>
+            {weekDays.map((d, i) => {
+              const isToday = d.toDateString() === new Date().toDateString();
+              const letter = ["S", "M", "T", "W", "T", "F", "S"][i];
+              const dateStr = d.toISOString().split("T")[0];
+              const hasLog = last7Days.some(
+                (log) => log?.date === dateStr && (log?.entries?.length || 0) > 0
+              );
+              
+              return (
+                <View key={i} style={styles.cstDayCol}>
+                  <Text style={[styles.cstDayLetter, isToday && { color: "#e89e5d" }]}>{letter}</Text>
+                  <View style={[styles.cstDayCircle, hasLog && { backgroundColor: "#e89e5d" }]}>
+                    {hasLog && <Ionicons name="checkmark" size={14} color="#fff" />}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+        <View style={styles.cstRight}>
+          <View style={styles.cstFlameContainer}>
+            <Ionicons name="sparkles" size={18} color="#FDE047" style={styles.cstSparkleLeft} />
+            <Ionicons name="sparkles" size={14} color="#FBBF24" style={styles.cstSparkleRight} />
+            <Ionicons name="flame" size={76} color="#e89e5d" />
+            <View style={styles.cstRightBadge}>
+              <Text style={styles.cstRightNumber}>{currentStreak}</Text>
+            </View>
+          </View>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -1105,4 +1183,93 @@ const styles = StyleSheet.create({
   skeletonRow: { flexDirection: "row", gap: 6 },
   skeletonLineShort: { flex: 1, height: 6, borderRadius: 3 },
   analyzingSubtext: { fontSize: 12, color: "#888", fontWeight: "500" },
+
+  // Custom Streak Toast UI
+  customStreakToast: {
+    position: "absolute",
+    top: 0, 
+    alignSelf: "center",
+    width: "92%",
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 28,
+    flexDirection: "row",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+    zIndex: 9999,
+  },
+  cstLeft: {
+    flex: 1,
+    paddingRight: 10,
+    justifyContent: "center",
+  },
+  cstTitle: {
+    fontSize: 24,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#e89e5d",
+    marginBottom: 16,
+  },
+  cstWeekRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingRight: 20,
+  },
+  cstDayCol: {
+    alignItems: "center",
+  },
+  cstDayLetter: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#333",
+    marginBottom: 8,
+  },
+  cstDayCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cstRight: {
+    width: 90,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cstFlameContainer: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cstSparkleLeft: {
+    position: "absolute",
+    top: -5,
+    left: -15,
+  },
+  cstSparkleRight: {
+    position: "absolute",
+    top: 5,
+    right: -10,
+  },
+  cstRightBadge: {
+    position: "absolute",
+    bottom: 8,
+    width: 28,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    borderWidth: 3,
+    borderColor: "#e89e5d",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cstRightNumber: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#e89e5d",
+  },
 });

@@ -56,8 +56,8 @@ export async function logInUser(firebaseUid: string): Promise<void> {
 
   try {
     const { customerInfo } = await Purchases.logIn(firebaseUid);
-    console.log("✅ RevenueCat: Logged in as", firebaseUid);
-    console.log("   Active entitlements:", Object.keys(customerInfo.entitlements.active));
+    // console.log("✅ RevenueCat: Logged in as", firebaseUid);
+    // console.log("Active entitlements:", Object.keys(customerInfo.entitlements.active));
   } catch (error) {
     console.warn("❌ RevenueCat logIn error:", error);
   }
@@ -73,7 +73,7 @@ export async function logOutUser(): Promise<void> {
     const isAnon = await Purchases.isAnonymous();
     if (!isAnon) {
       await Purchases.logOut();
-      console.log("✅ RevenueCat: Logged out, reset to anonymous");
+      // console.log("✅ RevenueCat: Logged out, reset to anonymous");
     }
   } catch (error) {
     console.warn("❌ RevenueCat logOut error:", error);
@@ -106,7 +106,7 @@ export async function hasPremiumAccess(): Promise<boolean> {
     }
     return isPremium;
   } catch (e) {
-    console.warn("RevenueCat Profile Error", e);
+    // console.warn("RevenueCat Profile Error", e);
     const cached = await AsyncStorage.getItem("mock_premium");
     return cached === "true";
   }

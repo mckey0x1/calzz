@@ -64,6 +64,7 @@ interface AuthContextValue {
   setIsMidOnboarding: (val: boolean) => void;
   isPremium: boolean;
   checkPremiumStatus: (planName?: string, forceTrue?: boolean) => Promise<void>;
+  syncUserPushToken: (token: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -443,6 +444,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function syncUserPushToken(token: string) {
+    if (!user) return;
+    try {
+      const db = getFirebaseDatabase();
+      const userRef = ref(db, `users/${user.uid}`);
+      await update(userRef, { pushToken: token });
+      if (userProfile) {
+        setUserProfile({ ...userProfile, pushToken: token } as any);
+      }
+      console.log("✅ Push Token synced to Firebase");
+    } catch (err) {
+      console.warn("❌ Failed syncing push token to Firebase", err);
+    }
+  }
+
   const value = useMemo(
     () => ({
       user,
@@ -467,6 +483,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsMidOnboarding,
       isPremium,
       checkPremiumStatus,
+      syncUserPushToken,
     }),
     [
       user,
@@ -484,6 +501,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithGoogle,
       signOut,
       deleteAccount,
+      syncUserPushToken,
     ],
   );
 

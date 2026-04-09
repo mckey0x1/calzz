@@ -5,6 +5,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
+import { NotificationProvider } from "@/lib/notification-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
 import { NutritionProvider, useNutrition } from "@/lib/nutrition-context";
@@ -50,7 +51,7 @@ function RootLayoutNav() {
   }
 
   return (
-    <>
+    <NotificationProvider>
       <StatusBar style="dark" />
       <Stack
         screenOptions={{
@@ -134,7 +135,7 @@ function RootLayoutNav() {
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
       </Stack>
-    </>
+    </NotificationProvider>
   );
 }
 
