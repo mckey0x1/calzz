@@ -134,6 +134,10 @@ function RootLayoutNav() {
           name="log-weight"
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
+        <Stack.Screen
+          name="account-settings"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
     </NotificationProvider>
   );

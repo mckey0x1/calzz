@@ -379,6 +379,25 @@ export default function OnboardingScreen() {
               )}
             </Pressable>
 
+            <Pressable
+              style={({ pressed }) => [
+                styles.googleButton,
+                {
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+              onPress={() => {
+                setShowBottomSheet(false);
+                router.push("/auth");
+              }}>
+              <Ionicons name="mail-outline" size={20} color={colors.text} />
+              <Text style={[styles.googleButtonText, { color: colors.text }]}>
+                Continue with Email
+              </Text>
+            </Pressable>
+
             <Text style={[styles.termsText, { color: colors.textTertiary }]}>
               By signing in, you agree to our{"\n"}
               <Text

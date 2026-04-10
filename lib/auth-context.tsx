@@ -10,7 +10,12 @@ import React, {
 } from "react";
 import { Platform, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setupRevenueCat, hasPremiumAccess, logInUser, logOutUser } from "./revenuecat";
+import {
+  setupRevenueCat,
+  hasPremiumAccess,
+  logInUser,
+  logOutUser,
+} from "./revenuecat";
 import {
   onAuthStateChanged,
   signInWithCredential,
@@ -19,6 +24,13 @@ import {
   User,
   signInWithPopup,
   updateProfile,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+  sendEmailVerification,
+  verifyBeforeUpdateEmail,
+  updatePassword as firebaseUpdatePassword,
+  reload,
 } from "firebase/auth";
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
@@ -65,6 +77,14 @@ interface AuthContextValue {
   isPremium: boolean;
   checkPremiumStatus: (planName?: string, forceTrue?: boolean) => Promise<void>;
   syncUserPushToken: (token: string) => Promise<void>;
+  // Email/Password Methods
+  signUpWithEmail: (email: string, password: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  verifyEmail: () => Promise<void>;
+  changeEmail: (newEmail: string) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
+  reloadUser: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -105,26 +125,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const unsubscribe = onAuthStateChanged(
           authInstance,
           async (firebaseUser) => {
-            // If we just signed out, don't re-set user to a stale value
             if (justSignedOutRef.current && firebaseUser) {
               return;
             }
 
-            // Only set loading to true if we don't already have an initialized state
-            // to avoid unmounting the entire app root layout during active sign-ins.
-            
             setUser(firebaseUser);
             if (firebaseUser) {
-              // ⚡ FAST PATH: Check local cache first for onboarding status
               const cached = await AsyncStorage.getItem(
                 `onboarding_${firebaseUser.uid}`,
               );
               if (cached === "true") {
                 setIsNewUser(false);
-                setIsLoading(false); // Reveal app early
+                setIsLoading(false);
               }
-
-              // 🔑 Identify this user in RevenueCat so they appear in the dashboard
               await logInUser(firebaseUser.uid);
 
               await loadOrCreateProfile(firebaseUser);
@@ -164,16 +177,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const db = getFirebaseDatabase();
       const userRef = ref(db, `users/${firebaseUser.uid}`);
       const goalsRef = ref(db, `userData/${firebaseUser.uid}/goals`);
-      
+
       // Parallel check for profile and goals
       const [snap, goalsSnap] = await Promise.all([
         get(userRef),
-        get(goalsRef)
+        get(goalsRef),
       ]);
 
       const hasOnboarded =
         goalsSnap.exists() ||
-        (await AsyncStorage.getItem(`onboarding_${firebaseUser.uid}`)) === "true";
+        (await AsyncStorage.getItem(`onboarding_${firebaseUser.uid}`)) ===
+          "true";
 
       if (snap.exists()) {
         const existing = snap.val() as UserProfile;
@@ -185,7 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await update(userRef, updates);
         setUserProfile({ ...existing, ...updates });
         setIsNewUser(!hasOnboarded);
-        
+
         if (hasOnboarded) {
           await AsyncStorage.setItem(`onboarding_${firebaseUser.uid}`, "true");
           await AsyncStorage.setItem("onboarding_done", "true");
@@ -220,12 +234,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSigningIn(false);
   }
 
-  async function signInWithGoogle() {
+  const signInWithGoogle = useCallback(async () => {
     if (!firebaseReady) {
       console.error("Firebase not ready yet");
       return;
     }
-    // Reset the logout marker when starting a new sign-in flow.
     setJustSignedOut(false);
 
     try {
@@ -245,50 +258,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         const signInResult: any = await GoogleSignin.signIn();
 
-        // Handle idToken correctly based on the return type of GoogleSignin.signIn()
         let idToken: string | null = null;
 
         if (signInResult && "type" in signInResult) {
           if (signInResult.type === "success") {
             idToken = signInResult.data?.idToken ?? null;
           } else {
-            // E.g., CancelledResponse
             setIsSigningIn(false);
             return;
           }
         } else if (signInResult && "data" in signInResult) {
           idToken = signInResult.data?.idToken ?? null;
         } else if (signInResult && "idToken" in signInResult) {
-          // older version fallback
           idToken = signInResult.idToken;
         }
 
         if (idToken) {
-          const credential = GoogleAuthProvider.credential(idToken);
           const authInstance = getFirebaseAuth();
-          await signInWithCredential(authInstance, credential);
+          const googleCredential = GoogleAuthProvider.credential(idToken);
+          await signInWithCredential(authInstance, googleCredential);
         } else {
-          console.error("No ID token returned from Google Sign In");
           setIsSigningIn(false);
         }
       }
     } catch (error) {
-      // console.error("Google sign in error:", error);
+      console.error("Sign in error:", error);
       setIsSigningIn(false);
     }
-  }
+  }, [firebaseReady, clientId]);
 
-  async function signOut() {
+  const signOut = useCallback(async () => {
     try {
-      justSignedOutRef.current = true;
+      await AsyncStorage.setItem("just_signed_out", "true");
       setJustSignedOut(true);
-      await AsyncStorage.removeItem("onboarding_done");
+      justSignedOutRef.current = true;
 
-      // 🔑 Log out from RevenueCat (reset to anonymous)
       await logOutUser();
 
       const authInstance = getFirebaseAuth();
       await firebaseSignOut(authInstance);
+      await AsyncStorage.removeItem("onboarding_done");
       if (Platform.OS !== "web") {
         try {
           await GoogleSignin.signOut();
@@ -301,14 +310,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Sign out error:", error);
     }
-  }
+  }, []);
 
-  const clearJustSignedOut = React.useCallback(() => {
+  const clearJustSignedOut = useCallback(() => {
     justSignedOutRef.current = false;
     setJustSignedOut(false);
   }, []);
 
-  async function deleteAccount() {
+  const deleteAccount = React.useCallback(async () => {
     if (!user) return;
     const authInstance = getFirebaseAuth();
     const currentUser = authInstance.currentUser;
@@ -391,73 +400,221 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // console.error("Delete account error:", error);
       throw error;
     }
-  }
+  }, [user]);
 
-  async function updateDisplayName(name: string) {
-    if (!user) return;
-    try {
-      const authInstance = getFirebaseAuth();
-      if (authInstance.currentUser) {
-        await updateProfile(authInstance.currentUser, { displayName: name });
-        // Update local user state to trigger re-render
-        setUser({ ...authInstance.currentUser });
+  const updateDisplayName = React.useCallback(
+    async (name: string) => {
+      if (!user) return;
+      try {
+        const authInstance = getFirebaseAuth();
+        if (authInstance.currentUser) {
+          await updateProfile(authInstance.currentUser, { displayName: name });
+          // Update local user state
+          setUser((prev) =>
+            prev ? ({ ...prev, displayName: name } as any) : null,
+          );
+        }
+
+        // Also update real-time database
+        const db = getFirebaseDatabase();
+        const userRef = ref(db, `users/${user.uid}`);
+        await update(userRef, { displayName: name });
+
+        // Update local profile state
+        setUserProfile((prev) =>
+          prev ? { ...prev, displayName: name } : null,
+        );
+      } catch (error) {
+        console.error("Update display name error:", error);
+        throw error;
       }
+    },
+    [user?.uid],
+  );
 
-      // Also update real-time database
-      const db = getFirebaseDatabase();
-      const userRef = ref(db, `users/${user.uid}`);
-      await update(userRef, { displayName: name });
+  const checkPremiumStatus = React.useCallback(
+    async (planName?: string, forceTrue?: boolean) => {
+      const status = forceTrue ? true : await hasPremiumAccess();
+      setIsPremium(status);
 
-      // Update local profile state
-      if (userProfile) {
-        setUserProfile({ ...userProfile, displayName: name });
+      // Sync to Firebase if user is logged in
+      if (user) {
+        try {
+          const db = getFirebaseDatabase();
+          const userRef = ref(db, `users/${user.uid}`);
+          const updates: any = {
+            isPremium: status,
+            lastPremiumCheckAt: Date.now(),
+          };
+          if (planName) updates.premiumPlan = planName;
+
+          await update(userRef, updates);
+
+          setUserProfile((prev) => (prev ? { ...prev, ...updates } : null));
+        } catch (err) {
+          console.warn("Failed syncing premium status to Firebase", err);
+        }
       }
-    } catch (error) {
-      console.error("Update display name error:", error);
-      throw error;
-    }
-  }
+    },
+    [user?.uid],
+  );
 
-  async function checkPremiumStatus(planName?: string, forceTrue?: boolean) {
-    const status = forceTrue ? true : await hasPremiumAccess();
-    setIsPremium(status);
-
-    // Sync to Firebase if user is logged in
-    if (user) {
+  const syncUserPushToken = React.useCallback(
+    async (token: string) => {
+      if (!user) return;
       try {
         const db = getFirebaseDatabase();
         const userRef = ref(db, `users/${user.uid}`);
-        const updates: any = {
-          isPremium: status,
-          lastPremiumCheckAt: Date.now(),
-        };
-        if (planName) updates.premiumPlan = planName;
-
-        await update(userRef, updates);
-
-        if (userProfile) {
-          setUserProfile({ ...userProfile, ...updates });
-        }
+        await update(userRef, { pushToken: token });
+        setUserProfile((prev) =>
+          prev ? ({ ...prev, pushToken: token } as any) : null,
+        );
+        // console.log("✅ Push Token synced to Firebase");
       } catch (err) {
-        console.warn("Failed syncing premium status to Firebase", err);
+        console.warn("❌ Failed syncing push token to Firebase", err);
       }
-    }
-  }
+    },
+    [user?.uid],
+  );
 
-  async function syncUserPushToken(token: string) {
-    if (!user) return;
-    try {
-      const db = getFirebaseDatabase();
-      const userRef = ref(db, `users/${user.uid}`);
-      await update(userRef, { pushToken: token });
-      if (userProfile) {
-        setUserProfile({ ...userProfile, pushToken: token } as any);
+  const signUpWithEmail = React.useCallback(
+    async (email: string, password: string) => {
+      setIsSigningIn(true);
+      try {
+        const authInstance = getFirebaseAuth();
+        const userCredential = await createUserWithEmailAndPassword(
+          authInstance,
+          email,
+          password,
+        );
+        // Automatically send verification on signup
+        if (userCredential.user) {
+          try {
+            await sendEmailVerification(userCredential.user);
+            console.log("✅ Initial verification email sent to:", email);
+          } catch (vErr) {
+            console.warn("⚠️ Failed to send initial verification email:", vErr);
+          }
+        }
+      } catch (error) {
+        console.error("Sign up error:", error);
+        throw error;
+      } finally {
+        setIsSigningIn(false);
       }
-      console.log("✅ Push Token synced to Firebase");
-    } catch (err) {
-      console.warn("❌ Failed syncing push token to Firebase", err);
+    },
+    [],
+  );
+
+  const signInWithEmail = React.useCallback(
+    async (email: string, password: string) => {
+      setIsSigningIn(true);
+      try {
+        const authInstance = getFirebaseAuth();
+        await signInWithEmailAndPassword(authInstance, email, password);
+      } catch (error) {
+        console.error("Sign in error:", error);
+        throw error;
+      } finally {
+        setIsSigningIn(false);
+      }
+    },
+    [],
+  );
+
+  const resetPassword = React.useCallback(async (email: string) => {
+    try {
+      const authInstance = getFirebaseAuth();
+      await sendPasswordResetEmail(authInstance, email);
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error;
     }
-  }
+  }, []);
+
+  const verifyEmail = React.useCallback(async () => {
+    const authInstance = getFirebaseAuth();
+    if (authInstance.currentUser) {
+      try {
+        console.log(
+          "Attempting to send verification email to:",
+          authInstance.currentUser.email,
+        );
+        await sendEmailVerification(authInstance.currentUser);
+        console.log("✅ Verification email request successful");
+      } catch (error: any) {
+        console.error(
+          "❌ sendEmailVerification failed:",
+          error.code,
+          error.message,
+        );
+        // Special handling for rate limiting
+        if (error.code === "auth/too-many-requests") {
+          throw new Error(
+            "Too many requests. Firebase limits how often you can send these. Please wait 10-15 minutes.",
+          );
+        }
+        throw error;
+      }
+    } else {
+      console.warn("⚠️ No current user found when trying to verify email");
+    }
+  }, []);
+
+  const changeEmail = React.useCallback(async (newEmail: string) => {
+    const authInstance = getFirebaseAuth();
+    if (authInstance.currentUser) {
+      try {
+        const actionCodeSettings = {
+          url: `https://${process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID}.firebaseapp.com`,
+          handleCodeInApp: false,
+        };
+        // Use verifyBeforeUpdateEmail for better security in newer SDKs
+        await verifyBeforeUpdateEmail(
+          authInstance.currentUser,
+          newEmail,
+          actionCodeSettings,
+        );
+        // Note: The email in Firebase won't change until they verify the new one
+      } catch (error: any) {
+        console.error("Change email error:", error);
+        if (error.code === "auth/too-many-requests") {
+          throw new Error(
+            "Too many requests. Please wait a few minutes before trying again.",
+          );
+        }
+        throw error;
+      }
+    }
+  }, []);
+
+  const changePassword = React.useCallback(async (newPassword: string) => {
+    const authInstance = getFirebaseAuth();
+    if (authInstance.currentUser) {
+      try {
+        await firebaseUpdatePassword(authInstance.currentUser, newPassword);
+      } catch (error) {
+        console.error("Change password error:", error);
+        throw error;
+      }
+    }
+  }, []);
+
+  const reloadUser = React.useCallback(async () => {
+    const authInstance = getFirebaseAuth();
+    if (authInstance.currentUser) {
+      try {
+        await reload(authInstance.currentUser);
+        const updatedUser = authInstance.currentUser;
+        setUser({ ...updatedUser });
+        return updatedUser.emailVerified;
+      } catch (error) {
+        console.error("Reload user error:", error);
+        throw error;
+      }
+    }
+    return false;
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -484,6 +641,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isPremium,
       checkPremiumStatus,
       syncUserPushToken,
+      signUpWithEmail,
+      signInWithEmail,
+      resetPassword,
+      verifyEmail,
+      changeEmail,
+      changePassword,
+      reloadUser,
     }),
     [
       user,
@@ -502,6 +666,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut,
       deleteAccount,
       syncUserPushToken,
+      signUpWithEmail,
+      signInWithEmail,
+      resetPassword,
+      verifyEmail,
+      changeEmail,
+      changePassword,
+      reloadUser,
     ],
   );
 

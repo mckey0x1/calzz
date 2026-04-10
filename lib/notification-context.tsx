@@ -24,34 +24,36 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then((token) => {
-      if (token) {
+    let isMounted = true;
+
+    async function initNotifications() {
+      if (expoPushToken) return; // Already have a token
+
+      const token = await registerForPushNotificationsAsync();
+      if (token && isMounted) {
         setExpoPushToken(token);
-        if (user) {
+        if (user?.uid) {
           syncUserPushToken(token);
         }
       }
-    });
+    }
+
+    initNotifications();
 
     notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      // You can handle incoming foreground notifications here globally
       console.log("Notification received:", notification);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      // You can handle the user tapping the notification here globally
       console.log("Notification tapped:", response);
     });
 
     return () => {
-      if (notificationListener.current) {
-        notificationListener.current.remove();
-      }
-      if (responseListener.current) {
-        responseListener.current.remove();
-      }
+      isMounted = false;
+      if (notificationListener.current) notificationListener.current.remove();
+      if (responseListener.current) responseListener.current.remove();
     };
-  }, [user, syncUserPushToken]); // Re-run when user signs in so we can sync the token to their specific profile
+  }, [user?.uid, syncUserPushToken]); // Re-run when user signs in so we can sync the token to their specific profile
 
   const scheduleNotification = async (title: string, body: string, data: any = {}, delaySeconds: number = 2) => {
     await scheduleLocalNotification(title, body, data, delaySeconds);

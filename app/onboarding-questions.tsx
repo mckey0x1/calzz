@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   Text,
+  TextInput,
   View,
   ScrollView,
   Pressable,
@@ -381,6 +382,8 @@ export default function OnboardingQuestionsScreen() {
     useNutrition();
   const {
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
     user,
     isSigningIn,
     setIsNewUser,
@@ -417,6 +420,11 @@ export default function OnboardingQuestionsScreen() {
     workouts: "",
     diet: "",
   });
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [isEmailView, setIsEmailView] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [authError, setAuthError] = useState("");
 
   // Save state on every change
   useEffect(() => {
@@ -586,6 +594,39 @@ export default function OnboardingQuestionsScreen() {
       return;
     }
     await signInWithGoogle();
+  };
+
+  const handleEmailAuth = async () => {
+    setAuthError("");
+    if (!authEmail || !authEmail.includes("@")) {
+      setAuthError("Valid email required.");
+      return;
+    }
+    if (authPassword.length < 6) {
+      setAuthError("Password min 6 chars.");
+      return;
+    }
+
+    const networkState = await Network.getNetworkStateAsync();
+    if (!networkState.isConnected && networkState.isConnected !== null) {
+      showToast("No network connection.");
+      return;
+    }
+
+    try {
+      if (authMode === "signup") {
+        await signUpWithEmail(authEmail, authPassword);
+      } else {
+        await signInWithEmail(authEmail, authPassword);
+      }
+      // Onboarding finish is handled by useEffect on [user]
+    } catch (err: any) {
+      let msg = "Auth failed. Try again.";
+      if (err.code === "auth/email-already-in-use") msg = "Email already in use.";
+      if (err.code === "auth/wrong-password") msg = "Wrong password.";
+      if (err.code === "auth/user-not-found") msg = "User not found.";
+      setAuthError(msg);
+    }
   };
 
   useEffect(() => {
@@ -954,40 +995,125 @@ export default function OnboardingQuestionsScreen() {
               </View>
             ) : (
               <View style={styles.premiumAuthContainer}>
-                {/* <View style={styles.premiumAuthIcon}>
-                  <LinearGradient
-                    colors={["#111", "#333333ff"]}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <AntDesign name="google" size={40} color="#fff" />
-                </View> */}
-
                 <Text style={styles.premiumAuthTitle}>
                   Your journey starts here
                 </Text>
-                {/* <Text style={styles.premiumAuthSubtitle}>
-                  Connect your account to save your progress and access personalized
-                  nutrition insights.
-                </Text> */}
 
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.googleButtonPremium,
-                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                  ]}
-                  onPress={handleGoogleSignIn}
-                  disabled={isSigningIn}>
-                  {isSigningIn ? (
-                    <ActivityIndicator color="#111" />
-                  ) : (
-                    <>
-                      <AntDesign name="google" size={24} color="#111" />
-                      <Text style={styles.googleButtonTextPremium}>
-                        Continue with Google
+                {!isEmailView ? (
+                  <>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.googleButtonPremium,
+                        pressed && {
+                          opacity: 0.9,
+                          transform: [{ scale: 0.98 }],
+                        },
+                      ]}
+                      onPress={handleGoogleSignIn}
+                      disabled={isSigningIn}>
+                      {isSigningIn ? (
+                        <ActivityIndicator color="#111" />
+                      ) : (
+                        <>
+                          <AntDesign name="google" size={24} color="#111" />
+                          <Text style={styles.googleButtonTextPremium}>
+                            Continue with Google
+                          </Text>
+                        </>
+                      )}
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.emailToggleBtn,
+                        pressed && { opacity: 0.7 },
+                      ]}
+                      onPress={() => setIsEmailView(true)}
+                      disabled={isSigningIn}>
+                      <Ionicons name="mail-outline" size={20} color="#111" />
+                      <Text style={styles.emailToggleText}>
+                        Continue with Email
                       </Text>
-                    </>
-                  )}
-                </Pressable>
+                    </Pressable>
+                  </>
+                ) : (
+                  <View style={styles.emailFormContainer}>
+                    <View style={styles.onboardingInputWrapper}>
+                      <Ionicons
+                        name="mail-outline"
+                        size={20}
+                        color="#999"
+                        style={styles.onboardingInputIcon}
+                      />
+                      <TextInput
+                        style={styles.onboardingTextInput}
+                        placeholder="Email Address"
+                        value={authEmail}
+                        onChangeText={setAuthEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                      />
+                    </View>
+
+                    <View style={styles.onboardingInputWrapper}>
+                      <Ionicons
+                        name="lock-closed-outline"
+                        size={20}
+                        color="#999"
+                        style={styles.onboardingInputIcon}
+                      />
+                      <TextInput
+                        style={styles.onboardingTextInput}
+                        placeholder="Password"
+                        value={authPassword}
+                        onChangeText={setAuthPassword}
+                        secureTextEntry
+                      />
+                    </View>
+                    {authError ? (
+                      <Text style={styles.authErrorText}>{authError}</Text>
+                    ) : null}
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.emailSubmitBtn,
+                        pressed && {
+                          opacity: 0.9,
+                          transform: [{ scale: 0.98 }],
+                        },
+                      ]}
+                      onPress={handleEmailAuth}
+                      disabled={isSigningIn}>
+                      {isSigningIn ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={styles.emailSubmitText}>
+                          {authMode === "signup" ? "Create Account" : "Sign In"}
+                        </Text>
+                      )}
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.authModeToggle}
+                      onPress={() =>
+                        setAuthMode(authMode === "signup" ? "signin" : "signup")
+                      }>
+                      <Text style={styles.authModeToggleText}>
+                        {authMode === "signup"
+                          ? "Already have an account? Sign In"
+                          : "Don't have an account? Sign Up"}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.backToSocialBtn}
+                      onPress={() => setIsEmailView(false)}>
+                      <Text style={styles.backToSocialText}>
+                        Back to selections
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
 
                 <Text style={styles.authLegalText}>
                   By continuing, you agree to our{" "}
@@ -1427,7 +1553,7 @@ const styles = StyleSheet.create({
   },
   premiumAuthContainer: {
     alignItems: "center",
-    paddingTop: 20,
+    paddingTop: 0,
     width: "100%",
   },
   premiumAuthIcon: {
@@ -1496,6 +1622,91 @@ const styles = StyleSheet.create({
     color: "#111",
     fontFamily: "Poppins_600SemiBold",
     textDecorationLine: "underline",
+  },
+  emailToggleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 16,
+    marginTop: 8,
+    width: "100%",
+    borderRadius: 56,
+    borderWidth: 1.5,
+    borderColor: "#111",
+    backgroundColor: "transparent", 
+  },
+  emailToggleText: {
+    fontSize: 17,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#111",
+  },
+  emailFormContainer: {
+    width: "100%",
+    paddingTop: 10,
+  },
+  onboardingInputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#eee",
+  },
+  onboardingInputIcon: {
+    marginRight: 12,
+  },
+  onboardingTextInput: {
+    flex: 1,
+    height: 52,
+    fontSize: 16,
+    fontFamily: "Poppins_500Medium",
+    color: "#111",
+  },
+  emailSubmitBtn: {
+    backgroundColor: "#111",
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  emailSubmitText: {
+    color: "#fff",
+    fontSize: 17,
+    fontFamily: "Poppins_600SemiBold",
+  },
+  authModeToggle: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  authModeToggleText: {
+    fontSize: 14,
+    fontFamily: "Poppins_500Medium",
+    color: "#666",
+  },
+  backToSocialBtn: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  backToSocialText: {
+    fontSize: 14,
+    fontFamily: "Poppins_500Medium",
+    color: "#999",
+  },
+  authErrorText: {
+    color: "#EF4444",
+    fontSize: 13,
+    fontFamily: "Poppins_500Medium",
+    textAlign: "center",
+    marginBottom: 16,
   },
   toastContainer: {
     position: "absolute",
