@@ -40,7 +40,7 @@ export default function ProfileScreen() {
 
   const { goals, totalCalories, totalProtein, totalCarbs, totalFat } =
     useNutrition();
-  const { user, signOut, deleteAccount } = useAuth();
+  const { user, signOut, deleteAccount, isPremium } = useAuth();
   const scrollRef = React.useRef<ScrollView>(null);
   const isFocused = useIsFocused();
 
@@ -278,6 +278,29 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {/* Subscription Management (Only if Premium) */}
+        {isPremium && (
+          <View style={[styles.card, { backgroundColor: "#fff", borderLeftWidth: 4, borderLeftColor: "#111" }]}>
+            <View style={styles.premiumHeader}>
+              <Ionicons name="star" size={18} color="#1A1A1A" />
+              <Text style={styles.premiumTitle}>Premium Subscription</Text>
+            </View>
+            <Text style={styles.premiumMessage}>
+              Your premium plan is active. You can manage or cancel your subscription anytime via the Google Play Store.
+            </Text>
+            <Pressable
+              onPress={() => Linking.openURL("https://play.google.com/store/account/subscriptions")}
+              style={({ pressed }) => [
+                styles.cancelButton,
+                { opacity: pressed ? 0.7 : 1 }
+              ]}
+            >
+              <Text style={styles.cancelButtonText}>Manage Subscription</Text>
+              <Ionicons name="open-outline" size={16} color="#4A4A4A" style={{ marginLeft: 6 }} />
+            </Pressable>
+          </View>
+        )}
 
         {/* Menu Group 1 */}
         <View
@@ -643,7 +666,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: "Poppins_500Medium",
     color: "#1A1A1A",
   },
@@ -951,5 +974,38 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 15,
     fontFamily: "Poppins_600SemiBold",
+  },
+  premiumHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  premiumTitle: {
+    fontSize: 16,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#1A1A1A",
+  },
+  premiumMessage: {
+    fontSize: 13,
+    fontFamily: "Poppins_400Regular",
+    color: "#4A4A4A",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  cancelButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F4F4F6",
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#EDEDED",
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontFamily: "Poppins_600SemiBold",
+    color: "#4A4A4A",
   },
 });

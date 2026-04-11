@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { Platform, Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Purchases, { CustomerInfo } from "react-native-purchases";
 import {
   setupRevenueCat,
   hasPremiumAccess,
@@ -166,6 +167,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [clientId, iosClientId]);
+
+  // Sync RevenueCat updates to Firebase Database automatically
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    Purchases.addCustomerInfoUpdateListener(async (customerInfo: CustomerInfo) => {
+      const isPremiumNow = 
+        typeof customerInfo.entitlements.active['premium'] !== "undefined" ||
+        typeof customerInfo.entitlements.active['Premium'] !== "undefined" ||
+        typeof customerInfo.entitlements.active['Calzz premium'] !== "undefined";
+      
+      setIsPremium(isPremiumNow);
+
+      if (user) {
+        try {
+          const db = getFirebaseDatabase();
+          const userRef = ref(db, `users/${user.uid}`);
+          await update(userRef, {
+            isPremium: isPremiumNow,
+            lastPremiumCheckAt: Date.now()
+          });
+          setUserProfile(prev => prev ? { ...prev, isPremium: isPremiumNow } : null);
+        } catch (e) {
+          console.log("RevenueCat auto-sync to DB error:", e);
+        }
+      }
+    });
+  }, [user]);
 
   // We pull premium status when auth finishes
   async function loadOrCreateProfile(firebaseUser: User) {

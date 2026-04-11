@@ -31,7 +31,7 @@ export default function PersonalDetailsScreen() {
           <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
         </Pressable>
         <Text style={styles.headerTitle}>Personal details</Text>
-        <View style={{ width: 40 }} /> 
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
@@ -49,65 +49,123 @@ export default function PersonalDetailsScreen() {
                 styles.changeGoalBtn,
                 { opacity: pressed ? 0.7 : 1 },
               ]}
-              onPress={() => router.push("/personal-details/goal-weight" as any)}>
+              onPress={() =>
+                router.push("/personal-details/goal-weight" as any)
+              }>
               <Text style={styles.changeGoalText}>Change Goal</Text>
             </Pressable>
           </View>
         </View>
 
         {/* Details List Card */}
-        <View style={[styles.card, { paddingVertical: 10, paddingHorizontal: 0 }]}>
+        <View
+          style={[styles.card, { paddingVertical: 10, paddingHorizontal: 0 }]}>
           <Pressable
-            style={({ pressed }) => [styles.listItem, { opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [
+              styles.listItem,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
             onPress={() => router.push("/personal-details/name" as any)}>
             <Text style={styles.listItemLabel}>Full Name</Text>
             <View style={styles.listItemValueRow}>
-              <Text style={styles.listItemValue}>{user?.displayName || "Not set"}</Text>
-              <Ionicons name="pencil-outline" size={18} color="#A0A0A0" style={styles.pencilIcon} />
+              <Text
+                style={styles.listItemValue}
+                numberOfLines={1}
+                ellipsizeMode="tail">
+                {user?.displayName || "Not set"}
+              </Text>
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color="#A0A0A0"
+                style={styles.pencilIcon}
+              />
             </View>
           </Pressable>
           <View style={styles.divider} />
 
           <Pressable
-            style={({ pressed }) => [styles.listItem, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push("/personal-details/height-weight" as any)}>
+            style={({ pressed }) => [
+              styles.listItem,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() =>
+              router.push("/personal-details/height-weight" as any)
+            }>
             <Text style={styles.listItemLabel}>Current Weight</Text>
             <View style={styles.listItemValueRow}>
-              <Text style={styles.listItemValue}>{goals.currentWeight} lbs</Text>
-              <Ionicons name="pencil-outline" size={18} color="#A0A0A0" style={styles.pencilIcon} />
+              <Text style={styles.listItemValue}>
+                {goals.currentWeight} lbs
+              </Text>
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color="#A0A0A0"
+                style={styles.pencilIcon}
+              />
             </View>
           </Pressable>
           <View style={styles.divider} />
 
           <Pressable
-            style={({ pressed }) => [styles.listItem, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push("/personal-details/height-weight" as any)}>
+            style={({ pressed }) => [
+              styles.listItem,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() =>
+              router.push("/personal-details/height-weight" as any)
+            }>
             <Text style={styles.listItemLabel}>Height</Text>
             <View style={styles.listItemValueRow}>
-              <Text style={styles.listItemValue}>{goals.heightFt} ft {goals.heightIn} in</Text>
-              <Ionicons name="pencil-outline" size={18} color="#A0A0A0" style={styles.pencilIcon} />
+              <Text style={styles.listItemValue}>
+                {goals.heightFt} ft {goals.heightIn} in
+              </Text>
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color="#A0A0A0"
+                style={styles.pencilIcon}
+              />
             </View>
           </Pressable>
           <View style={styles.divider} />
 
           <Pressable
-            style={({ pressed }) => [styles.listItem, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push("/personal-details/date-of-birth" as any)}>
+            style={({ pressed }) => [
+              styles.listItem,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
+            onPress={() =>
+              router.push("/personal-details/date-of-birth" as any)
+            }>
             <Text style={styles.listItemLabel}>Date of birth</Text>
             <View style={styles.listItemValueRow}>
               <Text style={styles.listItemValue}>{goals.dateOfBirth}</Text>
-              <Ionicons name="pencil-outline" size={18} color="#A0A0A0" style={styles.pencilIcon} />
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color="#A0A0A0"
+                style={styles.pencilIcon}
+              />
             </View>
           </Pressable>
           <View style={styles.divider} />
 
           <Pressable
-            style={({ pressed }) => [styles.listItem, { opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [
+              styles.listItem,
+              { opacity: pressed ? 0.7 : 1 },
+            ]}
             onPress={() => router.push("/personal-details/gender" as any)}>
             <Text style={styles.listItemLabel}>Gender</Text>
             <View style={styles.listItemValueRow}>
               <Text style={styles.listItemValue}>{goals.gender}</Text>
-              <Ionicons name="pencil-outline" size={18} color="#A0A0A0" style={styles.pencilIcon} />
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color="#A0A0A0"
+                style={styles.pencilIcon}
+              />
             </View>
           </Pressable>
           {/* <View style={styles.divider} /> */}
@@ -208,14 +266,19 @@ const styles = StyleSheet.create({
   listItemValueRow: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+    justifyContent: "flex-end",
+    marginLeft: 16,
   },
   listItemValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontFamily: "Poppins_600SemiBold",
     color: "#1A1A1A",
+    flexShrink: 1,
   },
   pencilIcon: {
     marginLeft: 8,
+    flexShrink: 0,
   },
   divider: {
     height: 1,

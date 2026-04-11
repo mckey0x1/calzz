@@ -33,7 +33,7 @@ module.exports =
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "googleServicesFile": process.env.GOOGLE_SERVICES_JSON,
-      "versionCode": 4
+      "versionCode": 31
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -66,9 +66,8 @@ module.exports =
     "extra": {
       "router": {
         "origin": "https://replit.com/"
-      },
-      "eas": {
-        "projectId": "7c5c4cea-3fa2-4273-8c7f-09b8460829d3"
+      },"eas": {
+        "projectId": "98a9acda-3925-4b87-8370-90ca9b4840bc"
       }
     }
   }
