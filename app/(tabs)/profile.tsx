@@ -310,7 +310,172 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        
+        {/* Widgets Header */}
+        {/* <View style={styles.widgetsHeader}>
+          <Text style={styles.widgetsTitle}>Widgets</Text>
+          <Text style={styles.widgetsLink}>How to add?</Text>
+        </View> */}
+
+        {/* Widgets Row */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.widgetsScrollInfo}>
+          {/* Left Widget: Calorie summary */}
+          <View style={[styles.widgetCard, { backgroundColor: "#fff" }]}>
+            <View style={styles.widgetRingContainer}>
+              <CalorieRing
+                progress={totalCalories / goals.dailyCalories || 0}
+                size={100}
+                strokeWidth={10}
+                color="#1A1A1A"
+                trackColor="#F5F5F5">
+                <View style={styles.ringCenter}>
+                  <Text style={styles.ringValue}>{caloriesLeft}</Text>
+                  <Text style={styles.ringLabel}>Calories left</Text>
+                </View>
+              </CalorieRing>
+            </View>
+            <Pressable
+              style={({ pressed }) => [
+                styles.logFoodBtn,
+                { opacity: pressed ? 0.8 : 1 },
+              ]}
+              onPress={() => router.push("/scanner")}>
+              <View style={styles.addIconWrap}>
+                <Ionicons name="add" size={12} color="#1A1A1A" />
+              </View>
+              <Text style={styles.logFoodText}>Log your food</Text>
+            </Pressable>
+          </View>
+
+          {/* Right Widget: Macros summary */}
+          <View
+            style={[
+              styles.widgetCard,
+              styles.widgetCardWide,
+              { backgroundColor: "#fff" },
+            ]}>
+            <View style={styles.widgetRowLayout}>
+              {/* Left Column: Calorie Ring */}
+              <View
+                style={[
+                  styles.widgetRingContainer2,
+                  { alignSelf: "center", justifyContent: "center" },
+                ]}>
+                <CalorieRing
+                  progress={totalCalories / goals.dailyCalories || 0}
+                  size={110}
+                  strokeWidth={10}
+                  color="#1A1A1A"
+                  trackColor="#F5F5F5">
+                  <View style={styles.ringCenter}>
+                    <Text style={styles.ringValueSmall}>{Math.round(caloriesLeft)}</Text>
+                    <Text style={styles.ringLabelSmall}>Calories left</Text>
+                  </View>
+                </CalorieRing>
+              </View>
+
+              {/* Middle Column: Macros */}
+              <View style={styles.macrosList}>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      {
+                        backgroundColor: colors.proteinColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
+                    ]}>
+                    <FontAwesome5
+                      name="drumstick-bite"
+                      size={12}
+                      color="#e65c5c"
+                    />
+                  </View>
+                  <View style={{ marginLeft: 8 }}>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, Math.round(goals.proteinGoal - totalProtein))}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Protein left</Text>
+                  </View>
+                </View>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      {
+                        backgroundColor: colors.carbsColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
+                    ]}>
+                    <MaterialCommunityIcons
+                      name="barley"
+                      size={16}
+                      color="#e89e5d"
+                    />
+                  </View>
+                  <View style={{ marginLeft: 8 }}>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, Math.round(goals.carbsGoal - totalCarbs))}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Carbs left</Text>
+                  </View>
+                </View>
+                <View style={styles.macroRow}>
+                  <View
+                    style={[
+                      styles.macroIconBg,
+                      {
+                        backgroundColor: colors.fatColor + "15",
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                      },
+                    ]}>
+                    <MaterialCommunityIcons
+                      name="peanut"
+                      size={16}
+                      color="#5a8bed"
+                    />
+                  </View>
+                  <View style={{ marginLeft: 8 }}>
+                    <Text style={styles.macroValue}>
+                      {Math.max(0, Math.round(goals.fatGoal - totalFat))}g
+                    </Text>
+                    <Text style={styles.macroLabel}>Fats left</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Right Column: Scan Actions */}
+              <View style={styles.actionBtnsCol}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => router.push("/scanner")}>
+                  <Ionicons name="scan-circle" size={24} color="#1A1A1A" />
+                  <Text style={styles.actionBtnText}>Scan Food</Text>
+                </Pressable>
+                {/* <Pressable
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  onPress={() => router.push("/scanner")}>
+                  <Ionicons name="barcode-outline" size={18} color="#1A1A1A" />
+                  <Text style={styles.actionBtnText}>Barcode</Text>
+                </Pressable> */}
+              </View>
+            </View>
+          </View>
+        </ScrollView>
 
         {/* Menu Group 2 */}
         <View

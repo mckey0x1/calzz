@@ -181,7 +181,7 @@ export default function ScanResultScreen() {
 
   function handleClose() {
     clearScanResult();
-    router.back();
+    router.replace("/(tabs)");
   }
 
   async function handleDelete() {

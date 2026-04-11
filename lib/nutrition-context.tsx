@@ -340,14 +340,14 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(
           `calzz_log_${getDateKey()}`,
           JSON.stringify(todayLog),
-        );
+        ).catch(() => {});
 
         if (weekLogs && weekLogs.length > 0) {
           await AsyncStorage.setItem("calzz_week_logs", JSON.stringify(weekLogs)).catch(() => {});
         }
 
-        // Sync to Widgets
-        syncWidgetData(todayLog, goals);
+        // ⚡ Sync to Native Android Widgets
+        syncWidgetData(todayLogRef.current, goalsRef.current);
 
         // Background Firebase sync (non-blocking)
         if (firebaseUidRef.current) {
@@ -831,17 +831,40 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const allDays = useMemo(() => [...weekLogs, todayLog], [weekLogs, todayLog]);
   const last7Days = useMemo(() => allDays.slice(-7), [allDays]);
   const currentStreak = useMemo(() => {
+    // 1. Create a map for O(1) date lookup of non-empty days
+    const logMap = new Map<string, boolean>();
+    allDays.forEach(log => {
+      if ((log?.entries?.length || 0) > 0) {
+        logMap.set(log.date, true);
+      }
+    });
+
     let streak = 0;
-    let i = allDays.length - 1;
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
 
-    if (i >= 0 && (allDays[i]?.entries?.length || 0) === 0) {
-      i--;
+    // 2. Decide where to start: if today is empty, we check if yesterday had a streak to keep alive
+    const hasToday = logMap.has(todayStr);
+    let checkDate = new Date();
+    
+    if (!hasToday) {
+      checkDate.setDate(checkDate.getDate() - 1);
+      const yesterdayStr = checkDate.toISOString().split("T")[0];
+      if (!logMap.has(yesterdayStr)) return 0; // Yesterday is also empty - streak is dead
     }
 
-    while (i >= 0 && (allDays[i]?.entries?.length || 0) > 0) {
-      streak++;
-      i--;
+    // 3. Count backwards consecutive days
+    while (true) {
+      const dateStr = checkDate.toISOString().split("T")[0];
+      if (logMap.has(dateStr)) {
+        streak++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+      if (streak > 365) break; // Optimization/safety
     }
+
     return streak;
   }, [allDays]);
   const weekStatus = useMemo(
@@ -849,28 +872,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     [last7Days],
   );
 
-  // Sync to Native Android Widgets via WidgetModule
-  useEffect(() => {
-    if (Platform.OS === "android" && NativeModules.WidgetModule) {
-      const remainingCalories = Math.max(0, goals.dailyCalories - totalCalories);
-      const caloriePercent = goals.dailyCalories > 0 ? Math.round((totalCalories / goals.dailyCalories) * 100) : 0;
-      const remainingProtein = Math.max(0, Math.round(goals.proteinGoal - totalProtein));
-      const remainingCarbs = Math.max(0, Math.round(goals.carbsGoal - totalCarbs));
-      const remainingFat = Math.max(0, Math.round(goals.fatGoal - totalFat));
-
-      try {
-        NativeModules.WidgetModule.updateWidgetData(
-          remainingCalories,
-          caloriePercent,
-          remainingProtein,
-          remainingCarbs,
-          remainingFat
-        );
-      } catch (err) {
-        console.warn("Failed to sync widget data", err);
-      }
-    }
-  }, [todayLog, goals, totalCalories, totalProtein, totalCarbs, totalFat]);
+  // Consolidate widget sync into the debounced reactive sync above
 
   const value = useMemo(
     () => ({

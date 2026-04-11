@@ -10,6 +10,7 @@ import {
   Dimensions,
   Image,
   Animated,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,6 +21,7 @@ import {
 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import Svg, { Circle } from "react-native-svg";
+import { useAuth } from "@/lib/auth-context";
 import { useNutrition } from "@/lib/nutrition-context";
 import { useNotifications } from "@/lib/notification-context";
 
@@ -83,6 +85,7 @@ let hasShownStreakThisSession = false;
 
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
+  const { user, isLoading: authLoading, justSignedOut } = useAuth();
   const {
     totalCalories,
     totalProtein,
@@ -96,6 +99,7 @@ export default function DashboardScreen() {
     scanResult,
     last7Days,
     currentStreak,
+    isLoading: nutritionLoading,
   } = useNutrition();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -260,6 +264,18 @@ export default function DashboardScreen() {
       percent: Math.min(Math.max(totalRaw * 10, 0), 100),
     };
   }, [displayCalories, displayProtein, displayCarbs, displayFat, displaySugar, displaySodium, goals]);
+
+  if (authLoading || nutritionLoading) {
+    return (
+      <View
+        style={[
+          styles.container,
+          { justifyContent: "center", alignItems: "center" },
+        ]}>
+        <ActivityIndicator size="large" color="#111" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
