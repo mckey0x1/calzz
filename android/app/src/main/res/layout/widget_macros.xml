@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_bg"
+    android:padding="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Left: Calorie Ring -->
+    <FrameLayout
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginLeft="4dp">
+
+        <ProgressBar
+            android:id="@+id/calorie_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:progressDrawable="@drawable/circular_progress"
+            android:max="100"
+            android:progress="70" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/calories_value_small"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2833"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="calorie left"
+                android:textSize="9sp"
+                android:textColor="#808080"
+                android:layout_marginTop="-4dp"/>
+        </LinearLayout>
+    </FrameLayout>
+
+    <!-- Middle: Macronutrients -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- Protein -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/circle_protein"
+                android:text="🍗"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginRight="8dp"/>
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/protein_val"
+                    android:text="283g"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+                <TextView
+                    android:text="Protein left"
+                    android:textSize="9sp"
+                    android:textColor="#808080"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-2dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Carbs -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+
+            <TextView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/circle_carbs"
+                android:text="🌾"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginRight="8dp"/>
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/carbs_val"
+                    android:text="212g"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+                <TextView
+                    android:text="Carbs left"
+                    android:textSize="9sp"
+                    android:textColor="#808080"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-2dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Fats -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/circle_fats"
+                android:text="🥜"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:layout_marginRight="8dp"/>
+
+            <LinearLayout
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <TextView
+                    android:id="@+id/fats_val"
+                    android:text="94g"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="#1A1A1A"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"/>
+                <TextView
+                    android:text="Fats left"
+                    android:textSize="9sp"
+                    android:textColor="#808080"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-2dp"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Right: Action Button -->
+    <LinearLayout
+        android:id="@+id/scan_food_button"
+        android:layout_width="56dp"
+        android:layout_height="match_parent"
+        android:layout_marginVertical="2dp"
+        android:background="@drawable/light_button_bg"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="6dp"
+        android:clickable="true">
+        
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@android:drawable/ic_menu_camera"
+            android:tint="#808080"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Scan Food"
+            android:textColor="#1A1A1A"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:textSize="9sp"/>
+    </LinearLayout>
+
+</LinearLayout>
