@@ -177,8 +177,16 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   }, [todayLog]);
 
   useEffect(() => {
-    const scannerState = { isAnalyzing, analyzingImage, analyzingPercent, scanResult };
-    AsyncStorage.setItem("calzz_scanner_state", JSON.stringify(scannerState)).catch(() => {});
+    const scannerState = {
+      isAnalyzing,
+      analyzingImage,
+      analyzingPercent,
+      scanResult,
+    };
+    AsyncStorage.setItem(
+      "calzz_scanner_state",
+      JSON.stringify(scannerState),
+    ).catch(() => {});
   }, [isAnalyzing, analyzingImage, analyzingPercent, scanResult]);
 
   // ⚡ PHASE 1: Instant load from local storage (AsyncStorage + SQLite)
@@ -215,11 +223,15 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       if (scannerData) {
         try {
           const sParsed = JSON.parse(scannerData);
-          if (sParsed.isAnalyzing !== undefined) setIsAnalyzing(sParsed.isAnalyzing);
-          if (sParsed.analyzingImage !== undefined) setAnalyzingImage(sParsed.analyzingImage);
-          if (sParsed.analyzingPercent !== undefined) setAnalyzingPercent(sParsed.analyzingPercent);
-          if (sParsed.scanResult !== undefined) setScanResult(sParsed.scanResult);
-        } catch(e) {}
+          if (sParsed.isAnalyzing !== undefined)
+            setIsAnalyzing(sParsed.isAnalyzing);
+          if (sParsed.analyzingImage !== undefined)
+            setAnalyzingImage(sParsed.analyzingImage);
+          if (sParsed.analyzingPercent !== undefined)
+            setAnalyzingPercent(sParsed.analyzingPercent);
+          if (sParsed.scanResult !== undefined)
+            setScanResult(sParsed.scanResult);
+        } catch (e) {}
       }
 
       // ─── Mark UI as ready — user sees their dashboard NOW ───
@@ -274,13 +286,17 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         } catch (e) {
           console.error("Background data load failed:", e);
         } finally {
-          setTimeout(() => { hydratingRef.current = false; }, 500);
+          setTimeout(() => {
+            hydratingRef.current = false;
+          }, 500);
         }
       });
     } catch (e) {
       console.error("Failed to load local data:", e);
       setIsLoading(false);
-      setTimeout(() => { hydratingRef.current = false; }, 500);
+      setTimeout(() => {
+        hydratingRef.current = false;
+      }, 500);
     }
   }
 
@@ -330,7 +346,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
 
   // ─── Reactive Sync: Debounced + skip during hydration ──────────────
   useEffect(() => {
-    if (isLoading || hydratingRef.current) return;
+    if (isLoading) return;
 
     // Debounce: wait 500ms before writing to avoid rapid-fire during batch updates
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
@@ -343,14 +359,17 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         ).catch(() => {});
 
         if (weekLogs && weekLogs.length > 0) {
-          await AsyncStorage.setItem("calzz_week_logs", JSON.stringify(weekLogs)).catch(() => {});
+          await AsyncStorage.setItem(
+            "calzz_week_logs",
+            JSON.stringify(weekLogs),
+          ).catch(() => {});
         }
 
         // ⚡ Sync to Native Android Widgets
-        syncWidgetData(todayLogRef.current, goalsRef.current);
+        syncWidgetData(todayLog, goals);
 
-        // Background Firebase sync (non-blocking)
-        if (firebaseUidRef.current) {
+        // Background Firebase sync (non-blocking) - only if NOT currently hydrating
+        if (firebaseUidRef.current && !hydratingRef.current) {
           saveDailyLog(firebaseUidRef.current, todayLog).catch((e) =>
             console.log("Firebase sync fail:", e),
           );
@@ -404,19 +423,21 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         uploadToCloudinary(newEntry.imageUri).then((remoteUrl) => {
           if (remoteUrl) {
             const remoteEntry = { ...newEntry, imageUri: remoteUrl };
-            
+
             // Re-update local state with remote URL so Firebase sync gets the clean URL
             setTodayLog((prev) => {
               if (!prev) return prev;
               return {
-                 ...prev,
-                 entries: prev.entries.map(e => e.id === remoteEntry.id ? remoteEntry : e)
+                ...prev,
+                entries: prev.entries.map((e) =>
+                  e.id === remoteEntry.id ? remoteEntry : e,
+                ),
               };
             });
-            
+
             // Re-update SQLite
             if (sqliteReadyRef.current) {
-               addMealEntry(remoteEntry, getDateKey()).catch(() => {});
+              addMealEntry(remoteEntry, getDateKey()).catch(() => {});
             }
           }
         });
@@ -735,7 +756,9 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     setAnalyzingPercent(30);
 
     try {
-      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+      const response = await fetch(
+        `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`,
+      );
       const data = await response.json();
 
       setAnalyzingPercent(70);
@@ -748,25 +771,49 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       const nut = p.nutriments || {};
 
       let serveWeight = parseFloat(p.serving_quantity);
-      let serveUnit = p.serving_quantity ? `(${p.serving_quantity}${p.serving_quantity_unit || "g"})` : "100g";
-      const scale = (!isNaN(serveWeight) && serveWeight > 0) ? (serveWeight / 100) : 1;
+      let serveUnit = p.serving_quantity
+        ? `(${p.serving_quantity}${p.serving_quantity_unit || "g"})`
+        : "100g";
+      const scale =
+        !isNaN(serveWeight) && serveWeight > 0 ? serveWeight / 100 : 1;
 
-      const scoreMap: Record<string, number> = { a: 10, b: 8, c: 6, d: 4, e: 2 };
+      const scoreMap: Record<string, number> = {
+        a: 10,
+        b: 8,
+        c: 6,
+        d: 4,
+        e: 2,
+      };
       const score = scoreMap[p.nutriscore_grade?.toLowerCase()] || 5;
 
       const getNut = (key: string) => {
-        return nut[`${key}_serving`] || (nut[`${key}_100g`] !== undefined ? nut[`${key}_100g`] * scale : undefined) || (nut[key] !== undefined ? nut[key] * scale : 0);
+        return (
+          nut[`${key}_serving`] ||
+          (nut[`${key}_100g`] !== undefined
+            ? nut[`${key}_100g`] * scale
+            : undefined) ||
+          (nut[key] !== undefined ? nut[key] * scale : 0)
+        );
       };
 
       const protein = getNut("proteins");
       const carbs = getNut("carbohydrates");
       const fat = getNut("fat");
-      
+
       // Fallback: Calculate calories from macros if energy is completely missing
-      let calories = nut["energy-kcal_serving"] || (nut["energy-kcal_100g"] !== undefined ? nut["energy-kcal_100g"] * scale : undefined);
-      if (calories === undefined) calories = nut["energy-kcal"] !== undefined ? nut["energy-kcal"] * scale : undefined;
-      if (calories === undefined && nut["energy_100g"]) calories = (nut["energy_100g"] / 4.184) * scale;
-      if (calories === undefined) calories = (protein * 4) + (carbs * 4) + (fat * 9);
+      let calories =
+        nut["energy-kcal_serving"] ||
+        (nut["energy-kcal_100g"] !== undefined
+          ? nut["energy-kcal_100g"] * scale
+          : undefined);
+      if (calories === undefined)
+        calories =
+          nut["energy-kcal"] !== undefined
+            ? nut["energy-kcal"] * scale
+            : undefined;
+      if (calories === undefined && nut["energy_100g"])
+        calories = (nut["energy_100g"] / 4.184) * scale;
+      if (calories === undefined) calories = protein * 4 + carbs * 4 + fat * 9;
 
       const parsedData = {
         name: p.product_name || "Unknown Product",
@@ -779,13 +826,18 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
         sodium: Math.round((getNut("sodium") || 0) * 1000), // convert g to mg
         score,
         servingSize: `1 serving ${serveUnit}`,
-        items: [{ 
-          name: p.product_name || `Barcode: ${barcode}`, 
-          estimatedGrams: isNaN(serveWeight) ? 100 : serveWeight, 
-          method: "barcode" 
-        }],
+        items: [
+          {
+            name: p.product_name || `Barcode: ${barcode}`,
+            estimatedGrams: isNaN(serveWeight) ? 100 : serveWeight,
+            method: "barcode",
+          },
+        ],
         image: p.image_front_url || null,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       };
 
       setScanResult(parsedData);
@@ -833,7 +885,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const currentStreak = useMemo(() => {
     // 1. Create a map for O(1) date lookup of non-empty days
     const logMap = new Map<string, boolean>();
-    allDays.forEach(log => {
+    allDays.forEach((log) => {
       if ((log?.entries?.length || 0) > 0) {
         logMap.set(log.date, true);
       }
@@ -846,7 +898,7 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
     // 2. Decide where to start: if today is empty, we check if yesterday had a streak to keep alive
     const hasToday = logMap.has(todayStr);
     let checkDate = new Date();
-    
+
     if (!hasToday) {
       checkDate.setDate(checkDate.getDate() - 1);
       const yesterdayStr = checkDate.toISOString().split("T")[0];

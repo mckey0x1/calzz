@@ -110,7 +110,7 @@ export default function DashboardScreen() {
   const { scheduleNotification } = useNotifications();
 
   const isFocused = useIsFocused();
-  const streakSlideAnim = useRef(new Animated.Value(-200)).current;
+  const streakSlideAnim = useRef(new Animated.Value(-500)).current;
 
   // Generate current week days (Sun -> Sat)
   const weekDays = useMemo(() => {
@@ -144,7 +144,7 @@ export default function DashboardScreen() {
         // Slide out after 4 seconds
         setTimeout(() => {
           Animated.timing(streakSlideAnim, {
-            toValue: -200,
+            toValue: -500,
             duration: 400,
             useNativeDriver: true
           }).start();
@@ -943,7 +943,7 @@ const styles = StyleSheet.create({
     borderColor: "#f8f8fa",
   },
   macroValueText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "800",
     color: "#111",
   },

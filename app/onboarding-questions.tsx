@@ -66,6 +66,7 @@ function CustomPicker({
   onValueChange,
   label,
   width = 120,
+  setIsScrolling,
 }: any) {
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -99,7 +100,17 @@ function CustomPicker({
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
-        onMomentumScrollEnd={handleScroll}
+        nestedScrollEnabled={true}
+        onMomentumScrollBegin={() => setIsScrolling?.(false)}
+        onMomentumScrollEnd={(e) => {
+          handleScroll(e);
+          setIsScrolling?.(true);
+        }}
+        onScrollEndDrag={(e) => {
+          handleScroll(e);
+          setIsScrolling?.(true);
+        }}
+        onScrollBeginDrag={() => setIsScrolling?.(false)}
         contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
         style={{ height: ITEM_HEIGHT * 5, width: "100%" }}>
         {items.map((item: any, idx: number) => {
@@ -347,7 +358,7 @@ const QUESTIONS = [
     title: "Dietary Preference",
     subtitle: "Do you follow a specific nutritional plan?",
     options: [
-      { label: "Balanced / No Restrictions", value: "balanced" },
+      { label: "Balanced", value: "balanced" },
       { label: "Keto / Low Carb", value: "keto" },
       { label: "Vegan / Plant-Based", value: "vegan" },
       { label: "High-Protein", value: "high-protein" },
@@ -425,6 +436,8 @@ export default function OnboardingQuestionsScreen() {
   const [isEmailView, setIsEmailView] = useState(false);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
   const [authError, setAuthError] = useState("");
+
+  const [parentScrollEnabled, setParentScrollEnabled] = useState(true);
 
   // Save state on every change
   useEffect(() => {
@@ -723,9 +736,7 @@ export default function OnboardingQuestionsScreen() {
 
       <ScrollView
         contentContainerStyle={styles.content}
-        scrollEnabled={
-          currentQuestion.type !== "height" && currentQuestion.type !== "weight"
-        }
+        scrollEnabled={parentScrollEnabled}
         showsVerticalScrollIndicator={false}>
         <Animated.View
           key={step}
@@ -834,6 +845,7 @@ export default function OnboardingQuestionsScreen() {
                         onValueChange={setFt}
                         label="ft"
                         width={65}
+                        setIsScrolling={setParentScrollEnabled}
                       />
                       <CustomPicker
                         items={inchItems}
@@ -841,6 +853,7 @@ export default function OnboardingQuestionsScreen() {
                         onValueChange={setInch}
                         label="in"
                         width={65}
+                        setIsScrolling={setParentScrollEnabled}
                       />
                     </View>
                   ) : (
@@ -852,6 +865,7 @@ export default function OnboardingQuestionsScreen() {
                       }
                       label="cm"
                       width={130}
+                      setIsScrolling={setParentScrollEnabled}
                     />
                   )}
                 </View>
@@ -867,6 +881,7 @@ export default function OnboardingQuestionsScreen() {
                       }
                       label="lb"
                       width={130}
+                      setIsScrolling={setParentScrollEnabled}
                     />
                   ) : (
                     <CustomPicker
@@ -877,6 +892,7 @@ export default function OnboardingQuestionsScreen() {
                       }
                       label="kg"
                       width={130}
+                      setIsScrolling={setParentScrollEnabled}
                     />
                   )}
                 </View>
@@ -891,6 +907,7 @@ export default function OnboardingQuestionsScreen() {
                   onValueChange={(v: any) => setAnswers({ ...answers, age: v })}
                   label="years old"
                   width={200}
+                  setIsScrolling={setParentScrollEnabled}
                 />
               </View>
             </View>
@@ -920,6 +937,8 @@ export default function OnboardingQuestionsScreen() {
                   </Text>
                 </Pressable>
               </View>
+              
+              
 
               <View style={styles.pickerColumn}>
                 {isImperial ? (
@@ -931,6 +950,7 @@ export default function OnboardingQuestionsScreen() {
                     }
                     label="lb"
                     width={180}
+                    setIsScrolling={setParentScrollEnabled}
                   />
                 ) : (
                   <CustomPicker
@@ -941,6 +961,7 @@ export default function OnboardingQuestionsScreen() {
                     }
                     label="kg"
                     width={180}
+                    setIsScrolling={setParentScrollEnabled}
                   />
                 )}
               </View>
@@ -1543,6 +1564,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 100,
     gap: 8,
+    marginBottom:50
   },
   analyzingStatusText: {
     fontSize: 12,

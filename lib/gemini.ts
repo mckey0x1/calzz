@@ -118,7 +118,7 @@ IMPORTANT:
 - The "method" field should be one of: "reference_scaling", "depth_estimation", "segmentation", "density_conversion".
 - "servingSize" should be a human-readable description like "1 bowl (~250g)" or "1 plate (~400g)".
 - The nutrition values should be the TOTAL for all items combined.
-- If the image is unclear or not food, set calories to 0 and name to "Unable to analyze".`;
+- If the image is unclear or not food, set calories to 0 and name to "unable to recognize food".`;
 
     const payload = {
       contents: [
@@ -175,7 +175,7 @@ IMPORTANT:
     console.error("Gemini API Error:", error);
     // Fallback on error
     return {
-      name: "Analysis Failed",
+      name: "Unable to recognize food",
       calories: 0,
       protein: 0,
       carbs: 0,

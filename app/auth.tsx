@@ -57,7 +57,8 @@ export default function AuthScreen() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web")
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     try {
       if (mode === "signin") {
@@ -69,10 +70,8 @@ export default function AuthScreen() {
         setTimeout(() => setMode("signin"), 3000);
       }
     } catch (err: any) {
-      let msg = "An error occurred. Please try again.";
-      if (err.code === "auth/user-not-found") msg = "No user found with this email.";
-      if (err.code === "auth/wrong-password") msg = "Incorrect password.";
-      if (err.code === "auth/email-already-in-use") msg = "Email is already registered.";
+      let msg = "Wrong credentials";
+
       setError(msg);
     }
   };
@@ -80,19 +79,27 @@ export default function AuthScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <LinearGradient colors={["#dfffa2", "#f3f4d4"]} style={StyleSheet.absoluteFill} />
+      style={styles.container}>
+      <LinearGradient
+        colors={["#dfffa2", "#f3f4d4"]}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <ScrollView contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 60 }]}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: insets.top + 60 },
+        ]}>
         <Pressable
-          style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.7 : 1 }]}
-          onPress={() => router.back()}
-        >
+          style={({ pressed }) => [
+            styles.backButton,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+          onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </Pressable>
 
-        <Animated.View style={[ { opacity: fadeAnim }]}>
+        <Animated.View style={[{ opacity: fadeAnim }]}>
           <Text style={styles.title}>
             {mode === "signin" ? "Welcome Back" : "Reset Password"}
           </Text>
@@ -102,13 +109,26 @@ export default function AuthScreen() {
               : "Enter your email to receive a reset link"}
           </Text>
 
-          {error ? <View style={styles.errorBadge}><Text style={styles.errorText}>{error}</Text></View> : null}
-          {successMessage ? <View style={styles.successBadge}><Text style={styles.successText}>{successMessage}</Text></View> : null}
+          {error ? (
+            <View style={styles.errorBadge}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+          {successMessage ? (
+            <View style={styles.successBadge}>
+              <Text style={styles.successText}>{successMessage}</Text>
+            </View>
+          ) : null}
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={20} color={colors.textTertiary} style={styles.inputIcon} />
+              <Ionicons
+                name="mail-outline"
+                size={20}
+                color={colors.textTertiary}
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder="email@example.com"
@@ -124,7 +144,12 @@ export default function AuthScreen() {
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrapper}>
-                <Ionicons name="lock-closed-outline" size={20} color={colors.textTertiary} style={styles.inputIcon} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={20}
+                  color={colors.textTertiary}
+                  style={styles.inputIcon}
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="••••••••"
@@ -137,16 +162,23 @@ export default function AuthScreen() {
           )}
 
           {mode === "signin" && (
-            <Pressable onPress={() => setMode("forgot")} style={styles.forgotBtn}>
-              <Text style={[styles.forgotText, { color: colors.tint }]}>Forgot Password?</Text>
+            <Pressable
+              onPress={() => setMode("forgot")}
+              style={styles.forgotBtn}>
+              <Text style={[styles.forgotText, { color: colors.tint }]}>
+                Forgot Password?
+              </Text>
             </Pressable>
           )}
 
           <Pressable
-            style={({ pressed }) => [styles.submitButton, isSigningIn && styles.disabledButton, { opacity: pressed ? 0.9 : 1 }]}
+            style={({ pressed }) => [
+              styles.submitButton,
+              isSigningIn && styles.disabledButton,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}
             onPress={handleSubmit}
-            disabled={isSigningIn}
-          >
+            disabled={isSigningIn}>
             {isSigningIn ? (
               <ActivityIndicator color="#fff" />
             ) : (

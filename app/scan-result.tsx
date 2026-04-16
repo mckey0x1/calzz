@@ -27,8 +27,14 @@ import { useNotifications } from "@/lib/notification-context";
 export default function ScanResultScreen() {
   const colors = useThemeColors("light");
   const insets = useSafeAreaInsets();
-  const { addFoodEntry, removeFoodEntry, scanResult, todayLog, weekLogs, clearScanResult } =
-    useNutrition();
+  const {
+    addFoodEntry,
+    removeFoodEntry,
+    scanResult,
+    todayLog,
+    weekLogs,
+    clearScanResult,
+  } = useNutrition();
   const { entryId } = useLocalSearchParams();
   const { scheduleNotification } = useNotifications();
 
@@ -166,13 +172,13 @@ export default function ScanResultScreen() {
       confidence: currentScan.score * 10,
       imageUri: currentScan.image,
     });
-    
+
     // Fire a local notification 1 second later!
     scheduleNotification(
       "Food successfully logged! 🥘",
       `Added ${currentScan.name} (${Math.round(currentScan.calories * quantity)} kcal) to your daily log.`,
       { foodId: currentScan.name },
-      1
+      1,
     );
 
     clearScanResult();
@@ -198,15 +204,15 @@ export default function ScanResultScreen() {
       "Are you sure you want to remove this entry from your log?",
       [
         { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive", 
+        {
+          text: "Delete",
+          style: "destructive",
           onPress: () => {
             removeFoodEntry(entryId as string);
             router.back();
-          } 
+          },
         },
-      ]
+      ],
     );
   }
 

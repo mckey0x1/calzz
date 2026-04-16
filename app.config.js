@@ -33,7 +33,7 @@ module.exports =
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "googleServicesFile": process.env.GOOGLE_SERVICES_JSON,
-      "versionCode": 31
+      "versionCode": 2
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
