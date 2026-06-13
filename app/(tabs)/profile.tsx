@@ -31,6 +31,7 @@ import { CalorieRing } from "@/components/CalorieRing";
 import * as Device from "expo-device";
 import * as Application from "expo-application";
 import Constants from "expo-constants";
+import * as StoreReview from "expo-store-review";
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -168,6 +169,24 @@ export default function ProfileScreen() {
 
   const isEmailUser = user?.providerData?.some(p => p.providerId === "password");
 
+  const handleRateApp = async () => {
+    try {
+      if (await StoreReview.hasAction()) {
+        await StoreReview.requestReview();
+      } else {
+        // Fallback for when the native prompt isn't available (e.g. testing or not supported)
+        const url = Platform.OS === 'ios'
+          ? `https://apps.apple.com/app/idYOUR_APP_ID?action=write-review`
+          : `market://details?id=${Constants.expoConfig?.android?.package || 'com.dormsdots'}`;
+        Linking.openURL(url).catch(() => {
+          Alert.alert("Store Error", "Could not open the app store.");
+        });
+      }
+    } catch (e) {
+      console.error("Store review error:", e);
+    }
+  };
+
   const menuGroup1 = [
     {
       id: "personal",
@@ -207,6 +226,12 @@ export default function ProfileScreen() {
       title: "Privacy Policy",
       icon: "shield-checkmark-outline",
       onPress: () => router.push("/privacy-policy"),
+    },
+    {
+      id: "rate",
+      title: "Rate App",
+      icon: "star-outline",
+      onPress: handleRateApp,
     },
     {
       id: "support",

@@ -23,6 +23,7 @@ import { useNutrition } from "@/lib/nutrition-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Network from "expo-network";
 import { useNotifications } from "@/lib/notification-context";
+import * as StoreReview from "expo-store-review";
 
 export default function ScanResultScreen() {
   const colors = useThemeColors("light");
@@ -183,6 +184,20 @@ export default function ScanResultScreen() {
 
     clearScanResult();
     router.replace("/(tabs)");
+
+    // Automatically prompt for review occasionally
+    // We check if they have at least a few entries today (indicating good usage)
+    setTimeout(async () => {
+      try {
+        const currentEntriesCount = todayLog?.entries?.length || 0;
+        // Prompt if they have added a couple of items today
+        if (currentEntriesCount >= 1 && await StoreReview.hasAction()) {
+          await StoreReview.requestReview();
+        }
+      } catch (e) {
+        console.error("Auto review prompt error:", e);
+      }
+    }, 1500);
   }
 
   function handleClose() {
