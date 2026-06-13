@@ -12,6 +12,7 @@ import {
   Animated as RNAnimated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Picker } from "react-native-wheel-pick";
 import { Ionicons, AntDesign } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
@@ -68,66 +69,30 @@ function CustomPicker({
   width = 120,
   setIsScrolling,
 }: any) {
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const index = items.findIndex((i: any) => i === selectedValue);
-    if (index >= 0 && scrollViewRef.current) {
-      // Use a longer delay to ensure the screen transition animation finished
-      const timer = setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          y: index * ITEM_HEIGHT,
-          animated: true,
-        });
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [items]);
-
-  const handleScroll = (event: any) => {
-    const y = event.nativeEvent.contentOffset.y;
-    const index = Math.round(y / ITEM_HEIGHT);
-    if (items[index] !== undefined && items[index] !== selectedValue) {
-      onValueChange(items[index]);
-    }
-  };
+  // Format items with label for the wheel picker
+  const pickerData = items.map((item: any) => `${item} ${label}`.trim());
+  const selectedString = `${selectedValue} ${label}`.trim();
 
   return (
-    <View style={[styles.pickerContainer, { width }]}>
-      <View style={styles.selectionHighlight} />
-      <ScrollView
-        ref={scrollViewRef}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
-        nestedScrollEnabled={true}
-        onMomentumScrollBegin={() => setIsScrolling?.(false)}
-        onMomentumScrollEnd={(e) => {
-          handleScroll(e);
-          setIsScrolling?.(true);
+    <View style={[{ width, height: ITEM_HEIGHT * 5, justifyContent: "center", overflow: "hidden" }]}>
+      {/* Background highlight pill to match previous style */}
+      <View style={[styles.selectionHighlight, { width: "100%", left: 0 }]} pointerEvents="none" />
+      <Picker
+        style={{ backgroundColor: "transparent", width: width, height: ITEM_HEIGHT * 5 }}
+        selectedValue={selectedString}
+        pickerData={pickerData}
+        onValueChange={(value: string) => {
+          const idx = pickerData.findIndex((p: string) => p === value);
+          if (idx >= 0 && items[idx] !== selectedValue) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onValueChange(items[idx]);
+          }
         }}
-        onScrollEndDrag={(e) => {
-          handleScroll(e);
-          setIsScrolling?.(true);
-        }}
-        onScrollBeginDrag={() => setIsScrolling?.(false)}
-        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-        style={{ height: ITEM_HEIGHT * 5, width: "100%" }}>
-        {items.map((item: any, idx: number) => {
-          const isSelected = item === selectedValue;
-          return (
-            <View key={idx} style={styles.pickerItem}>
-              <Text
-                style={[
-                  styles.pickerItemText,
-                  isSelected && styles.pickerItemTextSelected,
-                ]}>
-                {item} {label}
-              </Text>
-            </View>
-          );
-        })}
-      </ScrollView>
+        textColor="#1A1A1A"
+        textSize={20}
+        isShowSelectBackground={false}
+        isShowSelectLine={false}
+      />
     </View>
   );
 }
@@ -937,7 +902,6 @@ export default function OnboardingQuestionsScreen() {
                   </Text>
                 </Pressable>
               </View>
-              
               
 
               <View style={styles.pickerColumn}>

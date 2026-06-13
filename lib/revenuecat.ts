@@ -91,24 +91,17 @@ export async function hasPremiumAccess(): Promise<boolean> {
     }
 
     const ready = await waitForConfiguration();
-    if (!ready) {
-      const cached = await AsyncStorage.getItem("mock_premium");
-      return cached === "true";
-    }
+    if (!ready) return false;
 
     const customerInfo = await Purchases.getCustomerInfo();
     const isPremium =
-      typeof customerInfo.entitlements.active['Calzz premium'] !== "undefined";
+      typeof customerInfo.entitlements.active['Calzz premium'] !== "undefined" ||
+      typeof customerInfo.entitlements.active['premium'] !== "undefined" ||
+      typeof customerInfo.entitlements.active['Premium'] !== "undefined";
 
-    if (!isPremium) {
-      const cached = await AsyncStorage.getItem("mock_premium");
-      return cached === "true";
-    }
     return isPremium;
   } catch (e) {
-    // console.warn("RevenueCat Profile Error", e);
-    const cached = await AsyncStorage.getItem("mock_premium");
-    return cached === "true";
+    return false;
   }
 }
 

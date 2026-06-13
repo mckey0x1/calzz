@@ -10,6 +10,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
+import { Picker } from "react-native-wheel-pick";
 
 import { useNutrition } from "@/lib/nutrition-context";
 import { useThemeColors } from "@/constants/colors";
@@ -23,54 +25,28 @@ function CustomPicker({
   label,
   width = 80,
 }: any) {
-  const scrollViewRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const index = items.findIndex((i: any) => i === selectedValue);
-    if (index >= 0 && scrollViewRef.current) {
-      setTimeout(() => {
-        scrollViewRef.current?.scrollTo({
-          y: index * ITEM_HEIGHT,
-          animated: false,
-        });
-      }, 100);
-    }
-  }, []);
-
-  const handleScroll = (event: any) => {
-    const y = event.nativeEvent.contentOffset.y;
-    const index = Math.round(y / ITEM_HEIGHT);
-    if (items[index] !== undefined && items[index] !== selectedValue) {
-      onValueChange(items[index]);
-    }
-  };
+  const pickerData = items.map((item: any) => `${item}${label ? ` ${label}` : ""}`);
+  const selectedString = `${selectedValue}${label ? ` ${label}` : ""}`;
 
   return (
-    <View style={[styles.pickerContainer, { width }]}>
-      <View style={styles.selectionHighlight} />
-      <ScrollView
-        ref={scrollViewRef}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
-        onMomentumScrollEnd={handleScroll}
-        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
-        style={{ height: ITEM_HEIGHT * 5 }}>
-        {items.map((item: any, idx: number) => {
-          const isSelected = item === selectedValue;
-          return (
-            <View key={idx} style={styles.pickerItem}>
-              <Text
-                style={[
-                  styles.pickerItemText,
-                  isSelected && styles.pickerItemTextSelected,
-                ]}>
-                {item} {label}
-              </Text>
-            </View>
-          );
-        })}
-      </ScrollView>
+    <View style={[styles.pickerContainer, { width, justifyContent: "center", overflow: "hidden" }]}>
+      <View style={[styles.selectionHighlight, { width: "100%", left: 0 }]} pointerEvents="none" />
+      <Picker
+        style={{ backgroundColor: "transparent", width: width, height: ITEM_HEIGHT * 5 }}
+        selectedValue={selectedString}
+        pickerData={pickerData}
+        onValueChange={(value: string) => {
+          const idx = pickerData.findIndex((p: string) => p === value);
+          if (idx >= 0 && items[idx] !== selectedValue) {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onValueChange(items[idx]);
+          }
+        }}
+        textColor="#1A1A1A"
+        textSize={20}
+        isShowSelectBackground={false}
+        isShowSelectLine={false}
+      />
     </View>
   );
 }

@@ -138,6 +138,10 @@ function RootLayoutNav() {
           name="account-settings"
           options={{ headerShown: false, animation: "slide_from_right" }}
         />
+        <Stack.Screen
+          name="free-scans-countdown"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
     </NotificationProvider>
   );

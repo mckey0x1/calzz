@@ -40,8 +40,18 @@ export default function ProfileScreen() {
 
   const { goals, totalCalories, totalProtein, totalCarbs, totalFat } =
     useNutrition();
-  const { user, signOut, deleteAccount, isPremium } = useAuth();
+  const { user, signOut, deleteAccount, isPremium, freeScansUsed, MAX_FREE_SCANS } = useAuth();
   const scrollRef = React.useRef<ScrollView>(null);
+
+  const handleScannerPress = () => {
+    if (isPremium) {
+      router.push("/scanner");
+    } else if (freeScansUsed < MAX_FREE_SCANS) {
+      router.push("/free-scans-countdown" as any);
+    } else {
+      router.push("/paywall" as any);
+    }
+  };
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -290,7 +300,12 @@ export default function ProfileScreen() {
               Your premium plan is active. You can manage or cancel your subscription anytime via the Google Play Store.
             </Text>
             <Pressable
-              onPress={() => Linking.openURL("https://play.google.com/store/account/subscriptions")}
+              onPress={() => {
+                const url = Platform.OS === 'ios' 
+                  ? 'https://apps.apple.com/account/subscriptions'
+                  : 'https://play.google.com/store/account/subscriptions';
+                Linking.openURL(url);
+              }}
               style={({ pressed }) => [
                 styles.cancelButton,
                 { opacity: pressed ? 0.7 : 1 }
@@ -364,7 +379,7 @@ export default function ProfileScreen() {
                 styles.logFoodBtn,
                 { opacity: pressed ? 0.8 : 1 },
               ]}
-              onPress={() => router.push("/scanner")}>
+              onPress={handleScannerPress}>
               <View style={styles.addIconWrap}>
                 <Ionicons name="add" size={12} color="#1A1A1A" />
               </View>
@@ -482,7 +497,7 @@ export default function ProfileScreen() {
                     styles.actionBtn,
                     { opacity: pressed ? 0.7 : 1 },
                   ]}
-                  onPress={() => router.push("/scanner")}>
+                  onPress={handleScannerPress}>
                   <Ionicons name="scan-circle" size={24} color="#1A1A1A" />
                   <Text style={styles.actionBtnText}>Scan Food</Text>
                 </Pressable>

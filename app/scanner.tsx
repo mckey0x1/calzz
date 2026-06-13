@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Network from "expo-network";
 import { StyleSheet, Text, View, Pressable, Platform, Animated } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/lib/auth-context";
 
 // Types
 type TabOption = "scan_food" | "barcode" | "library";
@@ -21,6 +22,7 @@ export default function ScannerScreen() {
   const [activeTab, setActiveTab] = useState<TabOption>("scan_food");
 
   const { analyzeFood, lookupBarcode } = useNutrition();
+  const { incrementFreeScans } = useAuth();
   const cameraRef = useRef<any>(null);
 
   const [toastMessage, setToastMessage] = useState("");
@@ -112,6 +114,7 @@ export default function ScannerScreen() {
       } else {
         analyzeFood("", uri);
       }
+      incrementFreeScans();
     } catch (error) {
       console.error("Camera capture error:", error);
       setScanned(false);
@@ -147,6 +150,7 @@ export default function ScannerScreen() {
           } else {
             analyzeFood("", uri);
           }
+          incrementFreeScans();
         } else {
           // Revert to scan tab if they close the image picker
           setActiveTab("scan_food");
@@ -197,6 +201,7 @@ export default function ScannerScreen() {
                 router.replace("/(tabs)");
                 // Fetch product nutrition from Open Food Facts
                 lookupBarcode(data);
+                incrementFreeScans();
               }
             : undefined
         }

@@ -48,7 +48,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const colorScheme = useColorScheme();
   const colors = useThemeColors(colorScheme);
   const insets = useSafeAreaInsets();
-  const { isPremium } = useAuth();
+  const { isPremium, freeScansUsed, MAX_FREE_SCANS } = useAuth();
   const { width } = useWindowDimensions();
 
   const tabWidth = width - 40;
@@ -235,6 +235,9 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
             if (isPremium) {
               // @ts-ignore
               navigation.navigate("scanner");
+            } else if (freeScansUsed < MAX_FREE_SCANS) {
+              // @ts-ignore
+              navigation.navigate("free-scans-countdown");
             } else {
               // @ts-ignore
               navigation.navigate("paywall");

@@ -86,6 +86,9 @@ interface AuthContextValue {
   changeEmail: (newEmail: string) => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
   reloadUser: () => Promise<boolean>;
+  freeScansUsed: number;
+  incrementFreeScans: () => Promise<void>;
+  MAX_FREE_SCANS: number;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -101,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isNewUser, setIsNewUser] = useState(false);
   const [isMidOnboarding, setIsMidOnboarding] = useState(false);
   const justSignedOutRef = useRef(false);
+  const [freeScansUsed, setFreeScansUsed] = useState(0);
+  const MAX_FREE_SCANS = 3;
   const [clientId, setClientId] = useState<string | undefined>(
     getGoogleWebClientId() || undefined,
   );
@@ -156,6 +161,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
       });
   }, []);
+
+  const loadFreeScans = useCallback(async (uid: string) => {
+    try {
+      const val = await AsyncStorage.getItem(`free_scans_${uid}`);
+      if (val) {
+        setFreeScansUsed(parseInt(val, 10));
+      } else {
+        setFreeScansUsed(0);
+      }
+    } catch (e) {
+      console.error("Error loading free scans:", e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadFreeScans(user.uid);
+    } else {
+      loadFreeScans("guest");
+    }
+  }, [user, loadFreeScans]);
+
+  const incrementFreeScans = useCallback(async () => {
+    try {
+      const newVal = freeScansUsed + 1;
+      setFreeScansUsed(newVal);
+      const uid = user ? user.uid : "guest";
+      await AsyncStorage.setItem(`free_scans_${uid}`, newVal.toString());
+    } catch (e) {
+      console.error("Error incrementing free scans:", e);
+    }
+  }, [freeScansUsed, user]);
 
   useEffect(() => {
     if (clientId) {
@@ -677,6 +714,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       changeEmail,
       changePassword,
       reloadUser,
+      freeScansUsed,
+      incrementFreeScans,
+      MAX_FREE_SCANS,
     }),
     [
       user,
@@ -702,6 +742,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       changeEmail,
       changePassword,
       reloadUser,
+      freeScansUsed,
+      incrementFreeScans,
     ],
   );
 

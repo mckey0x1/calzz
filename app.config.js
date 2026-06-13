@@ -3,7 +3,7 @@ module.exports =
   "expo": {
     "name": "Calzz",
     "slug": "calzz",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "calzz",
@@ -33,7 +33,7 @@ module.exports =
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "googleServicesFile": process.env.GOOGLE_SERVICES_JSON,
-      "versionCode": 2
+      "versionCode": 36
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
